@@ -51,6 +51,11 @@ def _get_response_user(response):
         return response.get("user")
     return getattr(response, "user", None)
 
+def _get_user_metadata(user):
+    if isinstance(user, dict):
+        return user.get("user_metadata") or {}
+    return getattr(user, "user_metadata", None) or {}
+
 def get_client():
     global _client
     if not _HAS_SUPABASE:
@@ -136,10 +141,12 @@ def upsert_student_profile(user, phone=None):
     user_id = _get_user_value(user, "id")
     if not user_id:
         return None
+    metadata = _get_user_metadata(user)
+    phone_value = phone or _get_user_value(user, "phone") or metadata.get("phone")
     data = {
         "id": user_id,
         "email": _get_user_value(user, "email"),
-        "phone": phone or _get_user_value(user, "phone"),
+        "phone": phone_value,
     }
     try:
         return client.table("profiles").upsert(data).execute()

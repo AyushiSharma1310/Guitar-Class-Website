@@ -640,6 +640,7 @@ def render_faq_tab():
 
 
 def render_admin_panel():
+    admin_email = _get_config_value("ADMIN_EMAIL", "").strip().lower()
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     st.markdown(
         """
@@ -658,7 +659,7 @@ def render_admin_panel():
         st.error("Student dashboard is not ready yet. Create the profiles table and policies in Supabase.")
         with st.expander("Supabase SQL setup"):
             st.code(
-                """
+                f"""
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text,
@@ -672,7 +673,8 @@ create table if not exists public.profiles (
 alter table public.profiles
 add column if not exists is_paid boolean not null default false,
 add column if not exists next_session_at text,
-add column if not exists live_session_link text;
+add column if not exists live_session_link text,
+alter column phone type text using phone::text;
 
 alter table public.profiles enable row level security;
 
@@ -688,11 +690,24 @@ begin
 end;
 $$ language plpgsql security definer;
 
+insert into public.profiles (id, email, phone)
+select id, email, coalesce(phone, raw_user_meta_data ->> 'phone')
+from auth.users
+on conflict (id) do update
+set email = excluded.email,
+    phone = coalesce(excluded.phone, public.profiles.phone);
+
 drop trigger if exists on_auth_user_created on auth.users;
 
 create trigger on_auth_user_created
 after insert on auth.users
 for each row execute procedure public.handle_new_user();
+
+drop policy if exists "students can insert own profile" on public.profiles;
+drop policy if exists "students can update own profile" on public.profiles;
+drop policy if exists "students can read own profile" on public.profiles;
+drop policy if exists "admin can read profiles" on public.profiles;
+drop policy if exists "admin can update profiles" on public.profiles;
 
 create policy "students can insert own profile"
 on public.profiles
@@ -717,14 +732,14 @@ create policy "admin can read profiles"
 on public.profiles
 for select
 to authenticated
-using ((auth.jwt() ->> 'email') = 'YOUR_ADMIN_EMAIL_HERE');
+using (lower(auth.jwt() ->> 'email') = '{admin_email}');
 
 create policy "admin can update profiles"
 on public.profiles
 for update
 to authenticated
-using ((auth.jwt() ->> 'email') = 'YOUR_ADMIN_EMAIL_HERE')
-with check ((auth.jwt() ->> 'email') = 'YOUR_ADMIN_EMAIL_HERE');
+using (lower(auth.jwt() ->> 'email') = '{admin_email}')
+with check (lower(auth.jwt() ->> 'email') = '{admin_email}');
 
 create table if not exists public.recordings (
   id bigint generated always as identity primary key,
@@ -739,6 +754,10 @@ add column if not exists session_name text,
 add column if not exists created_at timestamp with time zone default now();
 
 alter table public.recordings enable row level security;
+
+drop policy if exists "paid students can read own recordings" on public.recordings;
+drop policy if exists "admin can read recordings" on public.recordings;
+drop policy if exists "admin can insert recordings" on public.recordings;
 
 create policy "paid students can read own recordings"
 on public.recordings
@@ -757,13 +776,13 @@ create policy "admin can read recordings"
 on public.recordings
 for select
 to authenticated
-using ((auth.jwt() ->> 'email') = 'YOUR_ADMIN_EMAIL_HERE');
+using (lower(auth.jwt() ->> 'email') = '{admin_email}');
 
 create policy "admin can insert recordings"
 on public.recordings
 for insert
 to authenticated
-with check ((auth.jwt() ->> 'email') = 'YOUR_ADMIN_EMAIL_HERE');
+with check (lower(auth.jwt() ->> 'email') = '{admin_email}');
                 """.strip(),
                 language="sql",
             )

@@ -645,11 +645,12 @@ def render_chat():
 
 
 def render_payment_prompt():
-    payment_qr_url = _get_config_value("PAYMENT_QR_URL")
+
     payment_note = _get_config_value(
         "PAYMENT_NOTE",
         "Scan the QR code to complete your fee payment. Access will be enabled after confirmation.",
     )
+
     st.markdown(
         f"""
         <div class="portal-card">
@@ -659,10 +660,8 @@ def render_payment_prompt():
         """,
         unsafe_allow_html=True,
     )
-    if payment_qr_url:
-        st.image(payment_qr_url, width=260)
-    else:
-        st.warning("Payment QR is not configured yet. Add PAYMENT_QR_URL in Streamlit secrets.")
+
+    st.image("assets/qr.jpeg", width=260)
 
 
 def render_pay_fees_tab(portal_result):

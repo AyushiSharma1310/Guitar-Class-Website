@@ -3,6 +3,17 @@ import os
 
 load_dotenv()
 
+def _get_config_value(name):
+    value = os.getenv(name)
+    if value:
+        return value
+    try:
+        import streamlit as st
+
+        return st.secrets.get(name)
+    except Exception:
+        return None
+
 # Try to import supabase client; if missing, keep the module usable so the app doesn't crash.
 try:
     from supabase import create_client
@@ -11,16 +22,20 @@ except Exception:
     create_client = None
     _HAS_SUPABASE = False
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+SUPABASE_URL = _get_config_value("SUPABASE_URL")
+SUPABASE_KEY = _get_config_value("SUPABASE_KEY")
 
 _client = None
 
-def _auth_credentials(identifier, password):
-    identifier = (identifier or "").strip()
-    if "@" in identifier:
-        return {"email": identifier, "password": password}
-    return {"phone": identifier, "password": password}
+def _auth_credentials(email, password):
+    return {"email": (email or "").strip(), "password": password}
+
+def _signup_credentials(email, phone, password):
+    return {
+        "email": (email or "").strip(),
+        "password": password,
+        "options": {"data": {"phone": (phone or "").strip()}},
+    }
 
 def _get_user_value(user, field):
     if isinstance(user, dict):
@@ -42,14 +57,29 @@ def get_client():
         _client = create_client(SUPABASE_URL, SUPABASE_KEY)
     return _client
 
-def sign_up(identifier, password):
+def sign_up(email, phone, password):
     if not _HAS_SUPABASE:
         return {"error": "supabase package not installed"}
     client = get_client()
     if not client:
         return {"error":"Supabase not configured"}
     try:
-        response = client.auth.sign_up(_auth_credentials(identifier, password))
+        response = client.auth.sign_up(_signup_credentials(email, phone, password))
+        user = _get_response_user(response)
+        if user:
+            upsert_student_profile(user, phone=phone)
+        return response
+    except Exception as e:
+        return {"error": str(e)}
+
+def sign_in(email, password):
+    if not _HAS_SUPABASE:
+        return {"error": "supabase package not installed"}
+    client = get_client()
+    if not client:
+        return {"error":"Supabase not configured"}
+    try:
+        response = client.auth.sign_in_with_password(_auth_credentials(email, password))
         user = _get_response_user(response)
         if user:
             upsert_student_profile(user)
@@ -57,43 +87,32 @@ def sign_up(identifier, password):
     except Exception as e:
         return {"error": str(e)}
 
-def sign_in(identifier, password):
+def request_email_otp(email):
     if not _HAS_SUPABASE:
         return {"error": "supabase package not installed"}
     client = get_client()
     if not client:
         return {"error":"Supabase not configured"}
     try:
-        response = client.auth.sign_in_with_password(_auth_credentials(identifier, password))
-        user = _get_response_user(response)
-        if user:
-            upsert_student_profile(user)
-        return response
+        return client.auth.sign_in_with_otp(
+            {
+                "email": (email or "").strip(),
+                "options": {"should_create_user": False},
+            }
+        )
     except Exception as e:
         return {"error": str(e)}
 
-def request_password_reset(identifier):
-    if not _HAS_SUPABASE:
-        return {"error": "supabase package not installed"}
-    client = get_client()
-    if not client:
-        return {"error":"Supabase not configured"}
-    identifier = (identifier or "").strip()
-    try:
-        if "@" in identifier:
-            return client.auth.reset_password_for_email(identifier)
-        return client.auth.sign_in_with_otp({"phone": identifier})
-    except Exception as e:
-        return {"error": str(e)}
-
-def verify_phone_reset_otp(phone, token):
+def verify_email_otp(email, token):
     if not _HAS_SUPABASE:
         return {"error": "supabase package not installed"}
     client = get_client()
     if not client:
         return {"error":"Supabase not configured"}
     try:
-        return client.auth.verify_otp({"phone": phone, "token": token, "type": "sms"})
+        return client.auth.verify_otp(
+            {"email": (email or "").strip(), "token": token, "type": "email"}
+        )
     except Exception as e:
         return {"error": str(e)}
 
@@ -108,7 +127,7 @@ def update_password(new_password):
     except Exception as e:
         return {"error": str(e)}
 
-def upsert_student_profile(user):
+def upsert_student_profile(user, phone=None):
     client = get_client()
     if not client:
         return None
@@ -118,7 +137,7 @@ def upsert_student_profile(user):
     data = {
         "id": user_id,
         "email": _get_user_value(user, "email"),
-        "phone": _get_user_value(user, "phone"),
+        "phone": phone or _get_user_value(user, "phone"),
     }
     try:
         return client.table("profiles").upsert(data).execute()
@@ -134,6 +153,60 @@ def get_student_profiles():
         return {"data": res.data if hasattr(res, "data") else [], "error": None}
     except Exception as e:
         return {"data": [], "error": str(e)}
+
+def update_student_access(user_id, is_paid, next_session_at="", live_session_link=""):
+    client = get_client()
+    if not client:
+        return {"error": "Supabase not configured"}
+    data = {
+        "is_paid": bool(is_paid),
+        "next_session_at": next_session_at,
+        "live_session_link": live_session_link,
+    }
+    try:
+        return client.table("profiles").update(data).eq("id", user_id).execute()
+    except Exception as e:
+        return {"error": str(e)}
+
+def add_recording_for_student(user_id, session_name, recording_url):
+    client = get_client()
+    if not client:
+        return {"error": "Supabase not configured"}
+    data = {
+        "user_id": user_id,
+        "session_name": session_name,
+        "recording_url": recording_url,
+    }
+    try:
+        return client.table("recordings").insert(data).execute()
+    except Exception as e:
+        return {"error": str(e)}
+
+def get_student_portal(user_id):
+    client = get_client()
+    if not client:
+        return {"profile": None, "recordings": [], "error": "Supabase not configured"}
+    try:
+        profile_res = client.table("profiles").select("*").eq("id", user_id).limit(1).execute()
+        profile_rows = profile_res.data if hasattr(profile_res, "data") else []
+        try:
+            recordings_res = (
+                client.table("recordings")
+                .select("*")
+                .eq("user_id", user_id)
+                .order("created_at", desc=True)
+                .execute()
+            )
+        except Exception:
+            recordings_res = client.table("recordings").select("*").eq("user_id", user_id).execute()
+        recordings = recordings_res.data if hasattr(recordings_res, "data") else []
+        return {
+            "profile": profile_rows[0] if profile_rows else None,
+            "recordings": recordings,
+            "error": None,
+        }
+    except Exception as e:
+        return {"profile": None, "recordings": [], "error": str(e)}
 
 def insert_payment(user_id, amount, note=""):
     if not _HAS_SUPABASE:

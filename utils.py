@@ -8,6 +8,18 @@ DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 
 
+def _get_config_value(name):
+    value = os.getenv(name)
+    if value:
+        return value
+    try:
+        import streamlit as st
+
+        return st.secrets.get(name)
+    except Exception:
+        return None
+
+
 def _build_faq_context():
     faqs = get_faqs()
     if not faqs:
@@ -19,8 +31,8 @@ def _build_faq_context():
 
 
 def get_groq_answer(question, api_key=None, model=None):
-    api_key = api_key or os.getenv("GROQ_API_KEY")
-    model = model or os.getenv("GROQ_MODEL") or DEFAULT_GROQ_MODEL
+    api_key = api_key or _get_config_value("GROQ_API_KEY")
+    model = model or _get_config_value("GROQ_MODEL") or DEFAULT_GROQ_MODEL
     if not api_key:
         return None
 

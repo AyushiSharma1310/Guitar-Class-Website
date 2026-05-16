@@ -4,6 +4,14 @@ from datetime import datetime
 
 load_dotenv()
 
+def _clear_dead_local_proxy():
+    dead_proxy_values = {"http://127.0.0.1:9", "https://127.0.0.1:9"}
+    for name in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"):
+        if os.getenv(name) in dead_proxy_values:
+            os.environ.pop(name, None)
+
+_clear_dead_local_proxy()
+
 def _get_config_value(name):
     value = os.getenv(name)
     if value:
@@ -30,6 +38,15 @@ APP_URL = (_get_config_value("APP_URL") or "").rstrip("/")
 
 _client = None
 _admin_client = None
+
+def _friendly_supabase_error(error):
+    message = str(error)
+    if "WinError 10061" in message or "actively refused" in message:
+        return (
+            "Could not reach Supabase from this computer. Check your internet connection, "
+            "VPN/proxy/firewall settings, then try again."
+        )
+    return message
 
 def _auth_credentials(email, password):
     return {"email": (email or "").strip(), "password": password}
@@ -157,7 +174,7 @@ def sign_up(email, phone, password, student_details=None):
             upsert_student_profile(user, phone=phone, student_details=student_details)
         return response
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": _friendly_supabase_error(e)}
 
 def sign_in(email, password):
     if not _HAS_SUPABASE:
@@ -173,7 +190,7 @@ def sign_in(email, password):
             upsert_student_profile(user)
         return response
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": _friendly_supabase_error(e)}
 
 def request_email_otp(email):
     if not _HAS_SUPABASE:
@@ -187,7 +204,7 @@ def request_email_otp(email):
             options["email_redirect_to"] = APP_URL
         return client.auth.sign_in_with_otp({"email": (email or "").strip(), "options": options})
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": _friendly_supabase_error(e)}
 
 def verify_email_otp(email, token):
     if not _HAS_SUPABASE:
@@ -202,7 +219,7 @@ def verify_email_otp(email, token):
         remember_auth_session(response)
         return response
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": _friendly_supabase_error(e)}
 
 def update_password(new_password):
     if not _HAS_SUPABASE:
@@ -213,7 +230,7 @@ def update_password(new_password):
     try:
         return client.auth.update_user({"password": new_password})
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": _friendly_supabase_error(e)}
 
 def upsert_student_profile(user, phone=None, student_details=None):
     client = get_admin_client()

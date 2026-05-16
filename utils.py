@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from openai import OpenAI
 from db import get_faqs
@@ -6,6 +7,7 @@ from db import get_faqs
 
 DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
+INDEX_PATH = Path(__file__).parent / "index.txt"
 
 
 def _get_config_value(name):
@@ -21,13 +23,23 @@ def _get_config_value(name):
 
 
 def _build_faq_context():
+    context_parts = []
+    if INDEX_PATH.exists():
+        index_context = INDEX_PATH.read_text(encoding="utf-8").strip()
+        if index_context:
+            context_parts.append(f"Website FAQ knowledge base:\n{index_context}")
+
     faqs = get_faqs()
-    if not faqs:
-        return "No saved FAQs are available yet."
-    return "\n".join(
-        f"Q: {row.get('question', '')}\nA: {row.get('answer', '')}"
-        for row in faqs[:20]
-    )
+    if faqs:
+        saved_faq_context = "\n".join(
+            f"Q: {row.get('question', '')}\nA: {row.get('answer', '')}"
+            for row in faqs[:20]
+        )
+        context_parts.append(f"Saved admin FAQs:\n{saved_faq_context}")
+
+    if not context_parts:
+        return "No saved FAQ context is available yet."
+    return "\n\n".join(context_parts)
 
 
 def get_groq_answer(question, api_key=None, model=None):

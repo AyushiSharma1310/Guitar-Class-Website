@@ -1,7 +1,9 @@
+import base64
 import json
 from datetime import date
 from html import escape
 import os
+from pathlib import Path
 from urllib.error import URLError
 from urllib.request import urlopen
 
@@ -32,6 +34,10 @@ st.set_page_config(
 )
 
 init_db()
+
+ASSET_DIR = Path(__file__).parent / "assets"
+TUTOR_VIDEO_PATH = ASSET_DIR / "tutor_intro.mp4"
+TUTOR_PHOTO_PATH = ASSET_DIR / "tutor_photo.jpeg"
 
 st.markdown(
     """
@@ -128,6 +134,116 @@ st.markdown(
         .info-panel ul {
             margin-bottom: 0;
             padding-left: 1.1rem;
+        }
+
+        .intro-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
+            gap: 1rem;
+            align-items: stretch;
+            margin: 1.2rem 0 1rem;
+        }
+
+        .media-panel {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.035);
+            height: 100%;
+            min-height: 250px;
+            overflow: hidden;
+            padding: 1rem;
+        }
+
+        .media-panel p {
+            color: rgba(255, 255, 255, 0.78);
+            line-height: 1.6;
+            margin-bottom: 0;
+        }
+
+        .media-panel img,
+        .media-panel video {
+            width: 100%;
+            border-radius: 8px;
+        }
+
+        .media-placeholder {
+            align-items: center;
+            color: rgba(255, 255, 255, 0.68);
+            display: flex;
+            min-height: 230px;
+            justify-content: center;
+            line-height: 1.55;
+            text-align: center;
+        }
+
+        .tutor-intro {
+            display: grid;
+            grid-template-columns: minmax(120px, 180px) minmax(220px, 1fr);
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .tutor-intro img {
+            aspect-ratio: 1;
+            object-fit: cover;
+        }
+
+        .tutor-copy {
+            min-width: 0;
+        }
+
+        .tutor-copy .section-title {
+            font-size: clamp(1.25rem, 2.4vw, 1.7rem);
+            line-height: 1.15;
+            overflow-wrap: normal;
+            word-break: normal;
+        }
+
+        .kpi-strip {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(120px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .video-banner {
+            margin: 1rem 0;
+        }
+
+        .video-banner .media-placeholder {
+            min-height: 360px;
+        }
+
+        .video-banner [data-testid="stVideo"] {
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .tutor-row {
+            margin: 1.1rem 0 1.4rem;
+        }
+
+        .class-info-row {
+            margin-top: 1.3rem;
+        }
+
+        .kpi-strip .metric-card {
+            min-width: 0;
+        }
+
+        .kpi-strip .metric-label,
+        .kpi-strip .metric-value {
+            overflow-wrap: normal;
+            word-break: normal;
+        }
+
+        .site-footer {
+            border-top: 1px solid rgba(255, 255, 255, 0.11);
+            color: rgba(255, 255, 255, 0.62);
+            font-size: 0.9rem;
+            margin-top: 2.6rem;
+            padding-top: 1.2rem;
+            text-align: center;
         }
 
         .divider {
@@ -230,8 +346,35 @@ st.markdown(
 
         @media (max-width: 800px) {
             .metric-row,
-            .portal-grid {
+            .portal-grid,
+            .intro-grid,
+            .kpi-strip {
                 grid-template-columns: 1fr;
+            }
+
+            .tutor-intro {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 1100px) {
+            .tutor-intro {
+                grid-template-columns: 1fr;
+            }
+
+            .tutor-intro img {
+                max-width: 220px;
+            }
+        }
+
+        @media (max-width: 980px) {
+            .kpi-strip {
+                grid-template-columns: 1fr;
+            }
+
+            .tutor-row,
+            .class-info-row {
+                margin-top: 1.5rem;
             }
         }
     </style>
@@ -584,43 +727,199 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-desc_col, session_col = st.columns(2, gap="large")
 
-with desc_col:
+def render_home_intro():
     st.markdown(
         """
-        <div class="info-panel">
-            <h2 class="section-title">Join our guitar classes</h2>
-            <ul>
-                <li>Weekly group and 1:1 sessions</li>
-                <li>Pop, Rock, Blues, and Classical foundations</li>
-                <li>Beginner-friendly lessons with flexible online timings</li>
-                <li>Practice plans, technique feedback, and song-based learning</li>
-            </ul>
+        <div class="intro-grid">
+            <div class="media-panel">
+                <h2 class="section-title">Meet your tutor</h2>
+                <p class="lead" style="margin-top: 0; font-size: 1rem;">
+                    Watch the intro before registering so you know the teaching style,
+                    lesson flow, and what your first class will feel like.
+                </p>
+            </div>
+            <div class="media-panel">
+                <h2 class="section-title">What you sign up for</h2>
+                <p>
+                    Structured guitar learning with clear practice targets, live feedback,
+                    beginner-friendly explanations, and access to class details after fee
+                    confirmation.
+                </p>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-with session_col:
-    st.markdown(
-        """
-        <div class="info-panel">
-            <h2 class="section-title">How sessions work</h2>
-            <p>
-                Live classes are hosted online. Students learn through guided
-                exercises, song walkthroughs, chord progressions, rhythm practice,
-                and personal feedback.
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.markdown('<div class="video-banner">', unsafe_allow_html=True)
+    if TUTOR_VIDEO_PATH.exists():
+        st.video(str(TUTOR_VIDEO_PATH))
+    else:
+        st.markdown(
+            """
+            <div class="media-panel media-placeholder">
+                Add tutor intro video at<br>
+                <strong>assets/tutor_intro.mp4</strong>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="tutor-row">', unsafe_allow_html=True)
+    tutor_col, summary_col = st.columns([0.95, 1.05], gap="large")
+    with tutor_col:
+        if TUTOR_PHOTO_PATH.exists():
+            photo_data = base64.b64encode(TUTOR_PHOTO_PATH.read_bytes()).decode("ascii")
+            photo_html = (
+                f'<img src="data:image/jpeg;base64,{photo_data}" '
+                'alt="Tutor photo">'
+            )
+        else:
+            photo_html = (
+                '<div class="media-placeholder" style="min-height: 140px;">'
+                'Add tutor photo at<br><strong>assets/tutor_photo.jpeg</strong></div>'
+            )
+
+        st.markdown(
+            f"""
+            <div class="media-panel">
+                <div class="tutor-intro">
+                    {photo_html}
+                    <div class="tutor-copy">
+                        <h2 class="section-title">Personal guidance, clear progress</h2>
+                        <p>
+                            Learn songs, rhythm, chords, and technique with practical
+                            feedback after every session.
+                        </p>
+                    </div>
+                </div>
+                <div class="kpi-strip">
+                    <div class="metric-card">
+                        <div class="metric-label">Learners taught</div>
+                        <div class="metric-value">50+</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Lesson format</div>
+                        <div class="metric-value" style="font-size: 1.35rem;">Live</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Access</div>
+                        <div class="metric-value" style="font-size: 1.35rem;">Portal</div>
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with summary_col:
+        st.markdown(
+            """
+            <div class="media-panel">
+                <h2 class="section-title">Before you register</h2>
+                <p>
+                    The intro video gives students and parents a clear sense of the
+                    tutor's teaching style, the learning pace, and how live sessions
+                    turn practice into visible progress.
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="class-info-row">', unsafe_allow_html=True)
+    desc_col, session_col = st.columns(2, gap="large")
+
+    with desc_col:
+        st.markdown(
+            """
+            <div class="info-panel">
+                <h2 class="section-title">Join our guitar classes</h2>
+                <ul>
+                    <li>Weekly group and 1:1 sessions</li>
+                    <li>Pop, Rock, Blues, and Classical foundations</li>
+                    <li>Beginner-friendly lessons with flexible online timings</li>
+                    <li>Practice plans, technique feedback, and song-based learning</li>
+                </ul>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    with session_col:
+        st.markdown(
+            """
+            <div class="info-panel">
+                <h2 class="section-title">How sessions work</h2>
+                <p>
+                    Live classes are hosted online. Students learn through guided
+                    exercises, song walkthroughs, chord progressions, rhythm practice,
+                    and personal feedback.
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
+render_home_intro()
 
 st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
 
 import html
+
+
+def render_student_dashboard(portal_result):
+    profile = (portal_result or {}).get("profile") or {}
+    signed_in = bool(st.session_state.user)
+    paid = _is_paid_student(profile) if signed_in and profile else False
+    paid_until = profile.get("paid_until") if profile else ""
+    next_session = profile.get("next_session_at") if profile else ""
+
+    status_text = "Active" if paid else "Pending"
+    payment_text = f"Paid until {escape(str(paid_until))}" if paid_until and paid else "Fee confirmation pending"
+    session_text = escape(str(next_session or "Shared after fee confirmation"))
+
+    st.markdown(
+        f"""
+        <h2 class="section-title">Student Dashboard</h2>
+        <div class="metric-row">
+            <div class="metric-card">
+                <div class="metric-label">Account</div>
+                <div class="metric-value" style="font-size: 1.35rem;">
+                    {escape(_user_label(st.session_state.user)) if signed_in else "Not signed in"}
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Payment status</div>
+                <div class="metric-value" style="font-size: 1.35rem;">{status_text}</div>
+                <p style="margin: 0.35rem 0 0; color: rgba(255,255,255,0.68);">{payment_text}</p>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Next session</div>
+                <div class="metric-value" style="font-size: 1.35rem;">Class access</div>
+                <p style="margin: 0.35rem 0 0; color: rgba(255,255,255,0.68);">{session_text}</p>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_footer():
+    st.markdown(
+        """
+        <div class="site-footer">
+            Made with ❤️ by my didi
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 def render_chat():
     for role, message in st.session_state.chat_history:
@@ -1223,6 +1522,7 @@ if _is_admin():
     with admin_tab:
         render_admin_panel()
 else:
+    render_student_dashboard(portal_result)
     faq_tab, pay_tab, session_tab = st.tabs(["FAQ Chat", "Pay Fees", "Session Details"])
     with faq_tab:
         render_faq_tab()
@@ -1230,3 +1530,5 @@ else:
         render_pay_fees_tab(portal_result)
     with session_tab:
         render_session_details_tab(portal_result)
+
+render_footer()

@@ -1,0 +1,43 @@
+Guitar Class FAQ Knowledge Base
+Use this file as the chatbot's main source of truth. Keep answers clear, current, and specific. Add new Q&A entries below as your class details change.
+
+I am Ashutosh Sharma, a B.Pharmacy 3rd year student at UPES, Dehradun Roorkee. I am a passionate musician and a guitar expert and a phenomenal and versatile singer. I have studied music in my schooling as minor subject. 
+
+I have taught 50+ children from age 5 to 20 since 2020 and still teach offline at my Roorkee residence whenever I come for vacation and sem break.
+
+I have made my learners fully pro in guitar and I am taking this journey forward by giving guitar lessons online. My batches will start as soon as my seats are filled. 
+
+I want to invite passionate learners who believe they have potential but never got a chance to learn music and guitar. Connect with me and fulfill your dream to play guitar easily and become that crowd attraction like I am.
+
+Register on my app for session links and recordings and for more queries Contact me at 8958290881 or email me at toshashu.2803@gmail.com between 7 PM to 8 PM daily.
+
+
+Q: What can students ask the chatbot about?
+A: Students can ask about class schedules, fees, beginner guidance, practice routines, course levels, payments, session access, and how to contact the tutor.
+
+Q: Who are these guitar classes for?
+A: The classes are suitable for beginners and progressing students who want structured guitar lessons and regular practice guidance.
+
+Q: What should a complete beginner practice first?
+A: A beginner should start with basic posture, tuning, simple finger exercises, open chords, smooth chord changes, rhythm counting, and a short daily practice routine.
+
+Q: How often should students practice?
+A: Students should practice consistently, even for a short time each day. A focused 20 to 30 minute routine is better than irregular long sessions.
+
+Q: How can a student access session details?
+A: Session details are available inside the student portal after the student's fee payment is confirmed.
+
+Q: Why are session details locked?
+A: Session details are locked until fee payment is marked as confirmed for the student account.
+
+Q: What should the chatbot say when it does not know an answer?
+A: The chatbot should say it does not have that information yet and suggest contacting the tutor through the contact information given above.
+
+Q: If users ask when will the session details given after payment?
+A: Say it will be updated as soon as Ashutosh the tutor verifies payment in 30 to 45 minutes, refresh after 1 hr and it will be updated, or contact on above details.
+
+Q: Is their data safe here?
+A: The website is end to end encrypted hence their data is safe and they can freely enjoy their sessions.
+
+Q: Is the website available and accessible on phone or tab?
+A: Yes it is, just install streamlit app

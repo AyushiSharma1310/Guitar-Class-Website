@@ -1,4 +1,9 @@
 # Guitar-Class-Website
+Hi friends,
+
+My brother is a pro musician and teaches guitar lessons sometimes when he comes during vacations from his college.
+I knew he likes giving guitar lessons to people and earn but only for a short duration.
+So, I made this end to end deployed app for him to earn whenever he wants and this doesn't cost a penny only earnings.
 
 Simple web app for managing guitar classes. Contains the app source files and requirements.
 

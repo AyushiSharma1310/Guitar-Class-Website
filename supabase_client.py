@@ -51,10 +51,66 @@ def _get_response_user(response):
         return response.get("user")
     return getattr(response, "user", None)
 
+def _get_response_session(response):
+    if isinstance(response, dict):
+        return response.get("session")
+    return getattr(response, "session", None)
+
+def _get_session_value(session, field):
+    if isinstance(session, dict):
+        return session.get(field)
+    return getattr(session, field, None)
+
 def _get_user_metadata(user):
     if isinstance(user, dict):
         return user.get("user_metadata") or {}
     return getattr(user, "user_metadata", None) or {}
+
+def _restore_streamlit_session():
+    if _client is None:
+        return
+    try:
+        import streamlit as st
+
+        auth_session = st.session_state.get("supabase_auth")
+        if not auth_session:
+            return
+        access_token = auth_session.get("access_token")
+        refresh_token = auth_session.get("refresh_token")
+        if access_token and refresh_token:
+            _client.auth.set_session(access_token, refresh_token)
+    except Exception:
+        return
+
+def remember_auth_session(response):
+    session = _get_response_session(response)
+    access_token = _get_session_value(session, "access_token")
+    refresh_token = _get_session_value(session, "refresh_token")
+    if not access_token or not refresh_token:
+        return
+    try:
+        import streamlit as st
+
+        st.session_state.supabase_auth = {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+        }
+    except Exception:
+        return
+
+def forget_auth_session():
+    try:
+        import streamlit as st
+
+        st.session_state.pop("supabase_auth", None)
+    except Exception:
+        pass
+    client = get_client()
+    if client:
+        try:
+            client.auth.sign_out()
+        except Exception:
+            pass
 
 def get_client():
     global _client
@@ -64,6 +120,7 @@ def get_client():
         if not SUPABASE_URL or not SUPABASE_KEY:
             return None
         _client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    _restore_streamlit_session()
     return _client
 
 def sign_up(email, phone, password):
@@ -74,6 +131,7 @@ def sign_up(email, phone, password):
         return {"error":"Supabase not configured"}
     try:
         response = client.auth.sign_up(_signup_credentials(email, phone, password))
+        remember_auth_session(response)
         user = _get_response_user(response)
         if user:
             upsert_student_profile(user, phone=phone)
@@ -89,6 +147,7 @@ def sign_in(email, password):
         return {"error":"Supabase not configured"}
     try:
         response = client.auth.sign_in_with_password(_auth_credentials(email, password))
+        remember_auth_session(response)
         user = _get_response_user(response)
         if user:
             upsert_student_profile(user)
@@ -117,9 +176,11 @@ def verify_email_otp(email, token):
     if not client:
         return {"error":"Supabase not configured"}
     try:
-        return client.auth.verify_otp(
+        response = client.auth.verify_otp(
             {"email": (email or "").strip(), "token": token, "type": "email"}
         )
+        remember_auth_session(response)
+        return response
     except Exception as e:
         return {"error": str(e)}
 

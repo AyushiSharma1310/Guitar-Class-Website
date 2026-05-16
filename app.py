@@ -6,6 +6,7 @@ import streamlit as st
 from db import find_faq, init_db, save_chat
 from supabase_client import (
     add_recording_for_student,
+    forget_auth_session,
     get_client,
     get_student_portal,
     get_student_profiles,
@@ -292,6 +293,7 @@ if not supaclient:
 elif st.session_state.user:
     st.sidebar.success(f"Signed in as {_user_label(st.session_state.user)}")
     if st.sidebar.button("Sign out"):
+        forget_auth_session()
         st.session_state.user = None
         st.rerun()
 else:

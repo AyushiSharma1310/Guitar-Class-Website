@@ -620,28 +620,28 @@ with session_col:
 st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
 
+import html
+
 def render_chat():
-    messages = []
-    for role, text in st.session_state.chat_history:
-        safe_text = escape(text).replace("\n", "<br>")
-        if role == "user":
-            css_class = "chat-user"
-            label = "You"
-        else:
-            css_class = "chat-assistant"
-            label = "Assistant"
-        messages.append(
-            f"""
-            <div class="chat-message {css_class}">
-                <span class="chat-role">{label}</span>
-                {safe_text}
-            </div>
-            """
+    for role, message in st.session_state.chat_history:
+
+        role_class = (
+            "chat-user"
+            if role == "user"
+            else "chat-assistant"
         )
-    st.markdown(
-        f'<div class="chat-shell">{"".join(messages)}</div>',
-        unsafe_allow_html=True,
-    )
+
+        st.markdown(
+            f"""
+            <div class="chat-message {role_class}">
+                <span class="chat-role">
+                    {"You" if role == "user" else "Assistant"}
+                </span>
+                <p>{html.unescape(message)}</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 def render_payment_prompt():

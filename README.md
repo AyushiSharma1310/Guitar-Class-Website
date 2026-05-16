@@ -5,6 +5,8 @@ My brother is a pro musician and teaches guitar lessons sometimes when he comes 
 I knew he likes giving guitar lessons to people and earn but only for a short duration.
 So, I made this end to end deployed app for him to earn whenever he wants and this doesn't cost a penny only earnings.
 
+You too can enroll for his sessions with the below link and learn guitar in both love and recorded sessions..
+
 Simple web app for managing guitar classes. Contains the app source files and requirements.
 
 Files:

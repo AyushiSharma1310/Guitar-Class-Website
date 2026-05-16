@@ -24,6 +24,7 @@ except Exception:
 
 SUPABASE_URL = _get_config_value("SUPABASE_URL")
 SUPABASE_KEY = _get_config_value("SUPABASE_KEY")
+APP_URL = (_get_config_value("APP_URL") or "").rstrip("/")
 
 _client = None
 
@@ -31,11 +32,14 @@ def _auth_credentials(email, password):
     return {"email": (email or "").strip(), "password": password}
 
 def _signup_credentials(email, phone, password):
-    return {
+    credentials = {
         "email": (email or "").strip(),
         "password": password,
         "options": {"data": {"phone": (phone or "").strip()}},
     }
+    if APP_URL:
+        credentials["options"]["email_redirect_to"] = APP_URL
+    return credentials
 
 def _get_user_value(user, field):
     if isinstance(user, dict):
@@ -94,12 +98,10 @@ def request_email_otp(email):
     if not client:
         return {"error":"Supabase not configured"}
     try:
-        return client.auth.sign_in_with_otp(
-            {
-                "email": (email or "").strip(),
-                "options": {"should_create_user": False},
-            }
-        )
+        options = {"should_create_user": False}
+        if APP_URL:
+            options["email_redirect_to"] = APP_URL
+        return client.auth.sign_in_with_otp({"email": (email or "").strip(), "options": options})
     except Exception as e:
         return {"error": str(e)}
 

@@ -1,5 +1,9 @@
+import json
+from datetime import date
 from html import escape
 import os
+from urllib.error import URLError
+from urllib.request import urlopen
 
 import streamlit as st
 
@@ -10,6 +14,7 @@ from supabase_client import (
     get_client,
     get_student_portal,
     get_student_profiles,
+    has_admin_service_role_key,
     request_email_otp,
     sign_in,
     sign_up,
@@ -275,6 +280,112 @@ def _user_id():
     return _get_user_value(st.session_state.user, "id")
 
 
+def _is_paid_student(student):
+    value = student.get("is_paid")
+    if isinstance(value, bool):
+        is_paid = value
+    elif value is None:
+        is_paid = False
+    elif isinstance(value, str):
+        is_paid = value.strip().lower() in {"true", "t", "1", "yes", "paid"}
+    else:
+        is_paid = bool(value)
+
+    if not is_paid:
+        return False
+
+    paid_until = _parse_date(student.get("paid_until"))
+    return not paid_until or paid_until >= date.today()
+
+
+def _parse_date(value):
+    if not value:
+        return None
+    if isinstance(value, date):
+        return value
+    try:
+        return date.fromisoformat(str(value)[:10])
+    except ValueError:
+        return None
+
+
+def _add_one_month(value=None):
+    base = value or date.today()
+    month = base.month + 1
+    year = base.year
+    if month > 12:
+        month = 1
+        year += 1
+
+    days_by_month = [31, 29 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    day = min(base.day, days_by_month[month - 1])
+    return date(year, month, day)
+
+
+def _next_paid_until(student):
+    current_paid_until = _parse_date(student.get("paid_until"))
+    base = current_paid_until if current_paid_until and current_paid_until >= date.today() else date.today()
+    return _add_one_month(base).isoformat()
+
+
+def _normalize_student_rows(students):
+    normalized = []
+    for student in students:
+        row = dict(student)
+        row["is_paid"] = _is_paid_student(row)
+        normalized.append(row)
+    return normalized
+
+
+def _student_display_name(student):
+    return (
+        student.get("student_name")
+        or student.get("email")
+        or student.get("phone")
+        or student.get("id")
+        or "Student"
+    )
+
+
+CITY_OPTIONS = [
+    "Delhi",
+    "Mumbai",
+    "Bengaluru",
+    "Hyderabad",
+    "Chennai",
+    "Kolkata",
+    "Pune",
+    "Jaipur",
+    "Lucknow",
+    "Other",
+]
+
+GENDER_OPTIONS = ["Female", "Male", "Non-binary", "Prefer not to say"]
+
+LANGUAGE_OPTIONS = ["English", "Hindi", "Hinglish", "Tamil", "Telugu", "Bengali", "Marathi", "Other"]
+
+
+@st.cache_data(ttl=60 * 60 * 24)
+def _lookup_cities_by_pincode(pincode):
+    if len(pincode) != 6 or not pincode.isdigit():
+        return []
+    try:
+        with urlopen(f"https://api.postalpincode.in/pincode/{pincode}", timeout=4) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except (OSError, URLError, ValueError):
+        return []
+
+    if not payload or payload[0].get("Status") != "Success":
+        return []
+
+    post_offices = payload[0].get("PostOffice") or []
+    cities = {
+        ", ".join(part for part in [office.get("District"), office.get("State")] if part)
+        for office in post_offices
+    }
+    return sorted(city for city in cities if city)
+
+
 if "user" not in st.session_state:
     st.session_state.user = None
 
@@ -301,7 +412,29 @@ else:
     signup_tab, signin_tab, reset_tab = st.sidebar.tabs(["Sign up", "Sign in", "Reset"])
 
     with signup_tab:
+        signup_pincode = st.text_input(
+            "Pincode",
+            key="signup_pincode",
+            placeholder="110001",
+            max_chars=10,
+        )
+        signup_pincode_digits = "".join(ch for ch in signup_pincode if ch.isdigit())
+        fetched_city_options = _lookup_cities_by_pincode(signup_pincode_digits)
+        if len(signup_pincode_digits) == 6 and fetched_city_options:
+            st.caption("City fetched from pincode.")
+        elif len(signup_pincode_digits) == 6:
+            st.caption("City could not be fetched. Choose manually.")
+
+        city_options = fetched_city_options or CITY_OPTIONS
+        if "Other" not in city_options:
+            city_options = [*city_options, "Other"]
+
         with st.form("signup_form"):
+            signup_name = st.text_input(
+                "Student name",
+                key="signup_name",
+                placeholder="Full name",
+            )
             email_col, phone_col = st.columns(2)
             with email_col:
                 signup_email = st.text_input(
@@ -315,6 +448,16 @@ else:
                     key="signup_phone",
                     placeholder="+919876543210",
                 )
+            signup_city = st.selectbox("City", city_options, key="signup_city")
+            gender_col, language_col = st.columns(2)
+            with gender_col:
+                signup_gender = st.selectbox("Gender", GENDER_OPTIONS, key="signup_gender")
+            with language_col:
+                signup_language = st.selectbox(
+                    "Language",
+                    LANGUAGE_OPTIONS,
+                    key="signup_language",
+                )
             signup_password = st.text_input(
                 "Password",
                 type="password",
@@ -322,10 +465,24 @@ else:
             )
             signup_submit = st.form_submit_button("Create account")
             if signup_submit:
-                if not signup_email or not signup_phone or not signup_password:
-                    st.error("Enter your email, phone number, and password.")
+                if not signup_name or not signup_email or not signup_phone or not signup_pincode or not signup_password:
+                    st.error("Enter your name, email, phone number, pincode, and password.")
+                elif len(signup_pincode_digits) != 6:
+                    st.error("Enter a valid 6-digit pincode.")
                 else:
-                    response = sign_up(signup_email, signup_phone, signup_password)
+                    student_details = {
+                        "student_name": signup_name.strip(),
+                        "city": signup_city,
+                        "pincode": signup_pincode_digits,
+                        "gender": signup_gender,
+                        "preferred_language": signup_language,
+                    }
+                    response = sign_up(
+                        signup_email,
+                        signup_phone,
+                        signup_password,
+                        student_details,
+                    )
                     if isinstance(response, dict) and response.get("error"):
                         st.error(response["error"])
                     else:
@@ -525,8 +682,12 @@ def render_pay_fees_tab(portal_result):
         st.info("Your payment page is being prepared. Please contact the tutor if this continues.")
         return
     profile = (portal_result or {}).get("profile") or {}
-    if profile.get("is_paid"):
-        st.success("Your fee payment is confirmed. Session details are available in the Session Details tab.")
+    if _is_paid_student(profile):
+        paid_until = profile.get("paid_until")
+        if paid_until:
+            st.success(f"Your fee payment is confirmed until {paid_until}. Session details are available.")
+        else:
+            st.success("Your fee payment is confirmed. Session details are available in the Session Details tab.")
         return
     render_payment_prompt()
 
@@ -549,7 +710,7 @@ def render_session_details_tab(portal_result):
         return
 
     profile = (portal_result or {}).get("profile") or {}
-    if not profile.get("is_paid"):
+    if not _is_paid_student(profile):
         st.warning("Session details are locked until your fee payment is confirmed.")
         render_payment_prompt()
         return
@@ -655,7 +816,7 @@ def render_admin_panel():
     )
 
     result = get_student_profiles()
-    students = result["data"]
+    students = _normalize_student_rows(result["data"])
 
     if result["error"]:
         st.error("Student dashboard is not ready yet. Create the profiles table and policies in Supabase.")
@@ -666,14 +827,28 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text,
   phone text,
+  student_name text,
+  city text,
+  pincode text,
+  gender text,
+  preferred_language text,
   is_paid boolean not null default false,
+  paid_until date,
+  last_payment_at timestamp with time zone,
   next_session_at text,
   live_session_link text,
   created_at timestamp with time zone default now()
 );
 
 alter table public.profiles
+add column if not exists student_name text,
+add column if not exists city text,
+add column if not exists pincode text,
+add column if not exists gender text,
+add column if not exists preferred_language text,
 add column if not exists is_paid boolean not null default false,
+add column if not exists paid_until date,
+add column if not exists last_payment_at timestamp with time zone,
 add column if not exists next_session_at text,
 add column if not exists live_session_link text,
 alter column phone type text using phone::text;
@@ -683,21 +858,66 @@ alter table public.profiles enable row level security;
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, email, phone)
-  values (new.id, new.email, coalesce(new.phone, new.raw_user_meta_data ->> 'phone'))
+  insert into public.profiles (
+    id,
+    email,
+    phone,
+    student_name,
+    city,
+    pincode,
+    gender,
+    preferred_language
+  )
+  values (
+    new.id,
+    new.email,
+    coalesce(new.phone, new.raw_user_meta_data ->> 'phone'),
+    new.raw_user_meta_data ->> 'student_name',
+    new.raw_user_meta_data ->> 'city',
+    new.raw_user_meta_data ->> 'pincode',
+    new.raw_user_meta_data ->> 'gender',
+    new.raw_user_meta_data ->> 'preferred_language'
+  )
   on conflict (id) do update
   set email = excluded.email,
-      phone = excluded.phone;
+      phone = coalesce(excluded.phone, public.profiles.phone),
+      student_name = coalesce(excluded.student_name, public.profiles.student_name),
+      city = coalesce(excluded.city, public.profiles.city),
+      pincode = coalesce(excluded.pincode, public.profiles.pincode),
+      gender = coalesce(excluded.gender, public.profiles.gender),
+      preferred_language = coalesce(excluded.preferred_language, public.profiles.preferred_language);
   return new;
 end;
 $$ language plpgsql security definer;
 
-insert into public.profiles (id, email, phone)
-select id, email, coalesce(phone, raw_user_meta_data ->> 'phone')
+insert into public.profiles (
+  id,
+  email,
+  phone,
+  student_name,
+  city,
+  pincode,
+  gender,
+  preferred_language
+)
+select
+  id,
+  email,
+  coalesce(phone, raw_user_meta_data ->> 'phone'),
+  raw_user_meta_data ->> 'student_name',
+  raw_user_meta_data ->> 'city',
+  raw_user_meta_data ->> 'pincode',
+  raw_user_meta_data ->> 'gender',
+  raw_user_meta_data ->> 'preferred_language'
 from auth.users
 on conflict (id) do update
 set email = excluded.email,
-    phone = coalesce(excluded.phone, public.profiles.phone);
+    phone = coalesce(excluded.phone, public.profiles.phone),
+    student_name = coalesce(excluded.student_name, public.profiles.student_name),
+    city = coalesce(excluded.city, public.profiles.city),
+    pincode = coalesce(excluded.pincode, public.profiles.pincode),
+    gender = coalesce(excluded.gender, public.profiles.gender),
+    preferred_language = coalesce(excluded.preferred_language, public.profiles.preferred_language);
 
 drop trigger if exists on_auth_user_created on auth.users;
 
@@ -771,6 +991,7 @@ using (
     select 1 from public.profiles
     where profiles.id = auth.uid()
     and profiles.is_paid = true
+    and (profiles.paid_until is null or profiles.paid_until >= current_date)
   )
 );
 
@@ -789,8 +1010,8 @@ with check (lower(auth.jwt() ->> 'email') = '{admin_email}');
                 language="sql",
             )
     else:
-        paid_students = [student for student in students if student.get("is_paid")]
-        unpaid_students = [student for student in students if not student.get("is_paid")]
+        paid_students = [student for student in students if _is_paid_student(student)]
+        unpaid_students = [student for student in students if not _is_paid_student(student)]
         st.markdown(
             f"""
             <div class="metric-row">
@@ -822,9 +1043,16 @@ with check (lower(auth.jwt() ->> 'email') = '{admin_email}');
                 hide_index=True,
                 column_order=[
                     "created_at",
+                    "student_name",
                     "email",
                     "phone",
+                    "city",
+                    "pincode",
+                    "gender",
+                    "preferred_language",
                     "is_paid",
+                    "paid_until",
+                    "last_payment_at",
                     "next_session_at",
                     "live_session_link",
                     "id",
@@ -832,28 +1060,100 @@ with check (lower(auth.jwt() ->> 'email') = '{admin_email}');
             )
 
         with unpaid_tab:
-            st.dataframe(
-                unpaid_students,
-                use_container_width=True,
-                hide_index=True,
-                column_order=["created_at", "email", "phone", "next_session_at", "id"],
-            )
+            if unpaid_students:
+                st.markdown("### Confirm Manual Payments")
+                for student in unpaid_students:
+                    student_id = student.get("id")
+                    if not student_id:
+                        continue
+                    name = _student_display_name(student)
+                    email = student.get("email") or ""
+                    phone = student.get("phone") or ""
+                    row_col, action_col = st.columns([3, 1])
+                    with row_col:
+                        st.markdown(f"**{name}**")
+                        st.caption(" | ".join(value for value in [email, phone] if value))
+                    with action_col:
+                        if st.button("Payment received", key=f"mark_paid_{student_id}"):
+                            paid_until = _next_paid_until(student)
+                            response = update_student_access(
+                                student_id,
+                                True,
+                                student.get("next_session_at") or "",
+                                student.get("live_session_link") or "",
+                                paid_until,
+                            )
+                            if isinstance(response, dict) and response.get("error"):
+                                st.error(response["error"])
+                            else:
+                                st.success(f"{name} marked as paid until {paid_until}.")
+                                st.rerun()
+            else:
+                st.info("No unpaid students found.")
 
         with paid_tab:
-            st.dataframe(
-                paid_students,
-                use_container_width=True,
-                hide_index=True,
-                column_order=["created_at", "email", "phone", "next_session_at", "live_session_link", "id"],
-            )
+            if paid_students:
+                st.dataframe(
+                    paid_students,
+                    use_container_width=True,
+                    hide_index=True,
+                    column_order=[
+                        "created_at",
+                        "student_name",
+                        "email",
+                        "phone",
+                        "city",
+                        "pincode",
+                        "preferred_language",
+                        "is_paid",
+                        "paid_until",
+                        "last_payment_at",
+                        "next_session_at",
+                        "live_session_link",
+                        "id",
+                    ],
+                )
+                st.markdown("### Renew Monthly Access")
+                for student in paid_students:
+                    student_id = student.get("id")
+                    if not student_id:
+                        continue
+                    name = _student_display_name(student)
+                    current_until = student.get("paid_until") or "not set"
+                    row_col, action_col = st.columns([3, 1])
+                    with row_col:
+                        st.markdown(f"**{name}**")
+                        st.caption(f"Paid until: {current_until}")
+                    with action_col:
+                        if st.button("Renew 1 month", key=f"renew_paid_{student_id}"):
+                            paid_until = _next_paid_until(student)
+                            response = update_student_access(
+                                student_id,
+                                True,
+                                student.get("next_session_at") or "",
+                                student.get("live_session_link") or "",
+                                paid_until,
+                            )
+                            if isinstance(response, dict) and response.get("error"):
+                                st.error(response["error"])
+                            else:
+                                st.success(f"{name} renewed until {paid_until}.")
+                                st.rerun()
+            else:
+                st.info("No paid students found. Mark a student as paid from Access Manager.")
 
         with access_tab:
             st.markdown("### Manage Fees And Session Access")
             if not students:
+                if not has_admin_service_role_key():
+                    st.warning(
+                        "No students are visible to the admin query. Add SUPABASE_SERVICE_ROLE_KEY "
+                        "to Streamlit Secrets so the server-side admin panel can read all profiles."
+                    )
                 st.info("No registered students yet.")
                 return
             student_options = {
-                f"{student.get('email') or student.get('phone') or student.get('id')}": student
+                f"{student.get('student_name') or student.get('email') or student.get('phone') or student.get('id')}": student
                 for student in students
             }
             selected_label = st.selectbox("Student", list(student_options.keys()))
@@ -863,6 +1163,12 @@ with check (lower(auth.jwt() ->> 'email') = '{admin_email}');
                 paid_status = st.checkbox(
                     "Paid student",
                     value=bool(selected_student.get("is_paid")),
+                )
+                default_paid_until = _parse_date(selected_student.get("paid_until")) or date.today()
+                paid_until = st.date_input(
+                    "Paid until",
+                    value=default_paid_until,
+                    disabled=not paid_status,
                 )
                 next_session = st.text_input(
                     "Next session schedule",
@@ -881,6 +1187,7 @@ with check (lower(auth.jwt() ->> 'email') = '{admin_email}');
                         paid_status,
                         next_session,
                         live_link,
+                        paid_until.isoformat() if paid_status else "",
                     )
                     if isinstance(response, dict) and response.get("error"):
                         st.error(response["error"])

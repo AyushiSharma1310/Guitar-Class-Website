@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 import os
+from datetime import datetime
 
 load_dotenv()
 
@@ -24,18 +25,22 @@ except Exception:
 
 SUPABASE_URL = _get_config_value("SUPABASE_URL")
 SUPABASE_KEY = _get_config_value("SUPABASE_KEY")
+SUPABASE_SERVICE_ROLE_KEY = _get_config_value("SUPABASE_SERVICE_ROLE_KEY")
 APP_URL = (_get_config_value("APP_URL") or "").rstrip("/")
 
 _client = None
+_admin_client = None
 
 def _auth_credentials(email, password):
     return {"email": (email or "").strip(), "password": password}
 
-def _signup_credentials(email, phone, password):
+def _signup_credentials(email, phone, password, student_details=None):
+    metadata = {"phone": (phone or "").strip()}
+    metadata.update(student_details or {})
     credentials = {
         "email": (email or "").strip(),
         "password": password,
-        "options": {"data": {"phone": (phone or "").strip()}},
+        "options": {"data": metadata},
     }
     if APP_URL:
         credentials["options"]["email_redirect_to"] = APP_URL
@@ -123,18 +128,33 @@ def get_client():
     _restore_streamlit_session()
     return _client
 
-def sign_up(email, phone, password):
+def get_admin_client():
+    global _admin_client
+    if not _HAS_SUPABASE:
+        return None
+    if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
+        if _admin_client is None:
+            _admin_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+        return _admin_client
+    return get_client()
+
+def has_admin_service_role_key():
+    return bool(SUPABASE_SERVICE_ROLE_KEY)
+
+def sign_up(email, phone, password, student_details=None):
     if not _HAS_SUPABASE:
         return {"error": "supabase package not installed"}
     client = get_client()
     if not client:
         return {"error":"Supabase not configured"}
     try:
-        response = client.auth.sign_up(_signup_credentials(email, phone, password))
+        response = client.auth.sign_up(
+            _signup_credentials(email, phone, password, student_details)
+        )
         remember_auth_session(response)
         user = _get_response_user(response)
         if user:
-            upsert_student_profile(user, phone=phone)
+            upsert_student_profile(user, phone=phone, student_details=student_details)
         return response
     except Exception as e:
         return {"error": str(e)}
@@ -195,8 +215,8 @@ def update_password(new_password):
     except Exception as e:
         return {"error": str(e)}
 
-def upsert_student_profile(user, phone=None):
-    client = get_client()
+def upsert_student_profile(user, phone=None, student_details=None):
+    client = get_admin_client()
     if not client:
         return None
     user_id = _get_user_value(user, "id")
@@ -204,10 +224,19 @@ def upsert_student_profile(user, phone=None):
         return None
     metadata = _get_user_metadata(user)
     phone_value = phone or _get_user_value(user, "phone") or metadata.get("phone")
+    details = {
+        "student_name": metadata.get("student_name"),
+        "city": metadata.get("city"),
+        "pincode": metadata.get("pincode"),
+        "gender": metadata.get("gender"),
+        "preferred_language": metadata.get("preferred_language"),
+    }
+    details.update(student_details or {})
     data = {
         "id": user_id,
         "email": _get_user_value(user, "email"),
         "phone": phone_value,
+        **details,
     }
     try:
         return client.table("profiles").upsert(data).execute()
@@ -215,7 +244,7 @@ def upsert_student_profile(user, phone=None):
         return None
 
 def get_student_profiles():
-    client = get_client()
+    client = get_admin_client()
     if not client:
         return {"data": [], "error": "Supabase not configured"}
     try:
@@ -224,8 +253,14 @@ def get_student_profiles():
     except Exception as e:
         return {"data": [], "error": str(e)}
 
-def update_student_access(user_id, is_paid, next_session_at="", live_session_link=""):
-    client = get_client()
+def update_student_access(
+    user_id,
+    is_paid,
+    next_session_at="",
+    live_session_link="",
+    paid_until=None,
+):
+    client = get_admin_client()
     if not client:
         return {"error": "Supabase not configured"}
     data = {
@@ -233,13 +268,26 @@ def update_student_access(user_id, is_paid, next_session_at="", live_session_lin
         "next_session_at": next_session_at,
         "live_session_link": live_session_link,
     }
+    if paid_until is not None:
+        data["paid_until"] = paid_until or None
+        if is_paid and paid_until:
+            data["last_payment_at"] = datetime.utcnow().isoformat()
     try:
         return client.table("profiles").update(data).eq("id", user_id).execute()
     except Exception as e:
+        if paid_until is not None and (
+            "paid_until" in str(e) or "last_payment_at" in str(e) or "schema cache" in str(e)
+        ):
+            data.pop("paid_until", None)
+            data.pop("last_payment_at", None)
+            try:
+                return client.table("profiles").update(data).eq("id", user_id).execute()
+            except Exception as retry_error:
+                return {"error": str(retry_error)}
         return {"error": str(e)}
 
 def add_recording_for_student(user_id, session_name, recording_url):
-    client = get_client()
+    client = get_admin_client()
     if not client:
         return {"error": "Supabase not configured"}
     data = {
@@ -253,7 +301,7 @@ def add_recording_for_student(user_id, session_name, recording_url):
         return {"error": str(e)}
 
 def get_student_portal(user_id):
-    client = get_client()
+    client = get_admin_client()
     if not client:
         return {"profile": None, "recordings": [], "error": "Supabase not configured"}
     try:

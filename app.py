@@ -38,12 +38,111 @@ init_db()
 ASSET_DIR = Path(__file__).parent / "assets"
 TUTOR_VIDEO_PATH = ASSET_DIR / "tutor_intro.mp4"
 TUTOR_PHOTO_PATH = ASSET_DIR / "tutor_photo.jpeg"
+BACKGROUND_IMAGE_PATH = ASSET_DIR / "background.jpeg"
+
+if BACKGROUND_IMAGE_PATH.exists():
+    background_data = base64.b64encode(BACKGROUND_IMAGE_PATH.read_bytes()).decode("ascii")
+    BACKGROUND_IMAGE_URL = f"data:image/jpeg;base64,{background_data}"
+else:
+    BACKGROUND_IMAGE_URL = ""
+
+if "light_theme" not in st.session_state:
+    st.session_state.light_theme = False
+
+if "translate_hindi" not in st.session_state:
+    st.session_state.translate_hindi = False
+
+TRANSLATIONS = {
+    "hi": {
+        "Live online guitar coaching": "लाइव ऑनलाइन गिटार कोचिंग",
+        "Guitar Class - Learn with a Pro": "गिटार क्लास - प्रो से सीखें",
+        "Practical guitar lessons for beginners and growing players, focused on songs, rhythm, chords, technique, and personal feedback.": "शुरुआती और आगे बढ़ रहे विद्यार्थियों के लिए व्यावहारिक गिटार लेसन, जिनमें गीत, रिदम, कॉर्ड्स, तकनीक और व्यक्तिगत फीडबैक पर ध्यान दिया जाता है.",
+        "Meet Ashutosh": "आशुतोष से मिलें",
+        "Meet who you learn from": "जिससे आप सीखेंगे उनसे मिलें",
+        "Watch Ashutosh performing live on stage and get a feel for the musicality, confidence, and real performance experience behind the classes.": "आशुतोष को स्टेज पर लाइव परफॉर्म करते देखें और क्लासेस के पीछे की संगीत समझ, आत्मविश्वास और वास्तविक परफॉर्मेंस अनुभव को महसूस करें.",
+        "What you sign up for": "आपको क्या मिलेगा",
+        "Structured guitar learning with clear practice targets, live feedback, beginner-friendly explanations, and access to class details after fee confirmation. Batch formation will be started soon for upcoming learners.": "स्पष्ट प्रैक्टिस लक्ष्य, लाइव फीडबैक, शुरुआती छात्रों के लिए आसान समझाइश, और फीस कन्फर्म होने के बाद क्लास डिटेल्स का एक्सेस. नए विद्यार्थियों के लिए बैच जल्द शुरू होंगे.",
+        "Personal guidance, clear progress": "व्यक्तिगत मार्गदर्शन, स्पष्ट प्रगति",
+        "Learn songs, rhythm, chords, and technique with practical feedback after every session.": "हर सेशन के बाद व्यावहारिक फीडबैक के साथ गीत, रिदम, कॉर्ड्स और तकनीक सीखें.",
+        "Before you register": "रजिस्टर करने से पहले",
+        "The stage performance video gives students and parents a clear sense of Ashutosh's command over the instrument, stage presence, and the kind of musical confidence students can build through consistent practice.": "स्टेज परफॉर्मेंस वीडियो से विद्यार्थियों और माता-पिता को आशुतोष की गिटार पर पकड़, स्टेज उपस्थिति, और नियमित अभ्यास से बनने वाले संगीत आत्मविश्वास की स्पष्ट झलक मिलती है.",
+        "Join our guitar classes": "हमारी गिटार क्लासेस से जुड़ें",
+        "New batch formation will be started soon": "नया बैच जल्द शुरू होगा",
+        "Weekly group and 1:1 sessions": "साप्ताहिक ग्रुप और 1:1 सेशन",
+        "Pop, Rock, Blues, and Classical foundations": "पॉप, रॉक, ब्लूज़ और क्लासिकल की बुनियाद",
+        "Beginner-friendly lessons with flexible online timings": "लचीले ऑनलाइन समय के साथ शुरुआती छात्रों के लिए आसान लेसन",
+        "Practice plans, technique feedback, and song-based learning": "प्रैक्टिस प्लान, तकनीक फीडबैक और गीत-आधारित सीखना",
+        "How sessions work": "सेशन कैसे चलते हैं",
+        "Live classes are hosted online. Students learn through guided exercises, song walkthroughs, chord progressions, rhythm practice, and personal feedback.": "लाइव क्लासेस ऑनलाइन होती हैं. विद्यार्थी गाइडेड एक्सरसाइज, गीत वॉकथ्रू, कॉर्ड प्रोग्रेशन, रिदम प्रैक्टिस और व्यक्तिगत फीडबैक के ज़रिए सीखते हैं.",
+        "Student Dashboard": "स्टूडेंट डैशबोर्ड",
+        "Account": "अकाउंट",
+        "Payment status": "पेमेंट स्टेटस",
+        "Next session": "अगला सेशन",
+        "Class access": "क्लास एक्सेस",
+        "Active": "एक्टिव",
+        "Pending": "पेंडिंग",
+        "Fee confirmation pending": "फीस कन्फर्मेशन बाकी है",
+        "Shared after fee confirmation": "फीस कन्फर्म होने के बाद साझा किया जाएगा",
+        "Pay Fees": "फीस भरें",
+        "Complete your payment to unlock live session access and recordings.": "लाइव सेशन एक्सेस और रिकॉर्डिंग्स अनलॉक करने के लिए पेमेंट पूरा करें.",
+        "Session Details": "सेशन डिटेल्स",
+        "Paid students can access upcoming live class details and shared recordings here.": "फीस भर चुके विद्यार्थी यहां आने वाली लाइव क्लास डिटेल्स और साझा रिकॉर्डिंग्स देख सकते हैं.",
+        "Next Session": "अगला सेशन",
+        "Live Class": "लाइव क्लास",
+        "Session Notes": "सेशन नोट्स",
+        "Open live session": "लाइव सेशन खोलें",
+        "Open session notes": "सेशन नोट्स खोलें",
+        "Session Recordings": "सेशन रिकॉर्डिंग्स",
+        "Open recording": "रिकॉर्डिंग खोलें",
+        "FAQ Chat": "FAQ चैट",
+        "Ask about schedules, fees, practice routines, lesson levels, or getting started.": "शेड्यूल, फीस, प्रैक्टिस रूटीन, लेसन लेवल या शुरुआत करने के बारे में पूछें.",
+    }
+}
+
+
+def tr(text):
+    if st.session_state.get("translate_hindi"):
+        return TRANSLATIONS["hi"].get(text, text)
+    return text
+
+
+st.sidebar.markdown("### Site Controls")
+st.sidebar.toggle(
+    "Light theme",
+    key="light_theme",
+    help="Switch between the default dark style and a lighter reading theme.",
+)
+st.sidebar.toggle(
+    "Hindi translation",
+    key="translate_hindi",
+    help="Translate the main student-facing site copy between English and Hindi.",
+)
+if st.sidebar.button(
+    "Privacy Policy",
+    help="We only collect details needed for class registration, payment confirmation, student access, and support. Login data is handled through Supabase authentication.",
+):
+    st.sidebar.info(
+        "Privacy policy: student details are used for registration, fee confirmation, "
+        "class access, session communication, and support. They are not sold or shared "
+        "for advertising."
+    )
 
 st.markdown(
     """
     <style>
         #MainMenu, footer {
             visibility: hidden;
+        }
+
+        .stApp {
+            background:
+                radial-gradient(circle at 22% 14%, rgba(216, 180, 106, 0.18), transparent 24rem),
+                radial-gradient(circle at 86% 22%, rgba(105, 132, 190, 0.14), transparent 28rem),
+                linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+                #0f1117;
+            background-size: auto, auto, 44px 44px, 44px 44px, auto;
+            background-attachment: fixed;
         }
 
         .block-container {
@@ -413,6 +512,198 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+if st.session_state.light_theme:
+    st.markdown(
+        """
+        <style>
+            .stApp {
+                background:
+                    radial-gradient(circle at 20% 12%, rgba(216, 180, 106, 0.26), transparent 24rem),
+                    radial-gradient(circle at 88% 20%, rgba(105, 132, 190, 0.18), transparent 28rem),
+                    linear-gradient(rgba(29, 31, 36, 0.045) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(29, 31, 36, 0.045) 1px, transparent 1px),
+                    #f7f3ea;
+                background-size: auto, auto, 44px 44px, 44px 44px, auto;
+                background-attachment: fixed;
+                color: #1d1f24;
+            }
+
+            [data-testid="stSidebar"] {
+                background: #fffaf0;
+                border-right: 1px solid rgba(29, 31, 36, 0.12);
+            }
+
+            [data-testid="stSidebar"] h1,
+            [data-testid="stSidebar"] h2,
+            [data-testid="stSidebar"] h3,
+            [data-testid="stSidebar"] h4,
+            [data-testid="stSidebar"] p,
+            [data-testid="stSidebar"] label,
+            [data-testid="stSidebar"] span,
+            [data-testid="stSidebar"] small,
+            [data-testid="stSidebar"] [data-testid="stMarkdownContainer"],
+            [data-testid="stSidebar"] [data-testid="stWidgetLabel"],
+            [data-testid="stSidebar"] [data-testid="stCaptionContainer"] {
+                color: #1d1f24 !important;
+                opacity: 1 !important;
+            }
+
+            [data-testid="stSidebar"] [data-testid="stCaptionContainer"],
+            [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
+                color: rgba(29, 31, 36, 0.68) !important;
+            }
+
+            [data-testid="stSidebar"] .stTabs [data-baseweb="tab-list"] {
+                border-bottom-color: rgba(29, 31, 36, 0.16);
+            }
+
+            [data-testid="stSidebar"] .stTabs [data-baseweb="tab"] p,
+            [data-testid="stSidebar"] .stTabs [data-baseweb="tab"] span {
+                color: rgba(29, 31, 36, 0.72) !important;
+                opacity: 1 !important;
+            }
+
+            [data-testid="stSidebar"] .stTabs [aria-selected="true"] p,
+            [data-testid="stSidebar"] .stTabs [aria-selected="true"] span {
+                color: #9a6a0a !important;
+                font-weight: 800;
+            }
+
+            [data-testid="stSidebar"] .stTextInput input {
+                background: #ffffff !important;
+                border-color: rgba(29, 31, 36, 0.18) !important;
+                color: #1d1f24 !important;
+            }
+
+            [data-testid="stSidebar"] .stTextInput input::placeholder {
+                color: rgba(29, 31, 36, 0.44) !important;
+            }
+
+            [data-testid="stSidebar"] .stButton button,
+            [data-testid="stSidebar"] .stFormSubmitButton button {
+                background: #1d1f24 !important;
+                border-color: #1d1f24 !important;
+                color: #fffaf0 !important;
+            }
+
+            [data-testid="stSidebar"] .stButton button p,
+            [data-testid="stSidebar"] .stFormSubmitButton button p {
+                color: #fffaf0 !important;
+            }
+
+            .lead,
+            .info-panel p,
+            .info-panel li,
+            .media-panel p,
+            .portal-card p,
+            .metric-card p,
+            .site-footer {
+                color: rgba(29, 31, 36, 0.78) !important;
+            }
+
+            .stTabs [data-baseweb="tab-list"] {
+                border-bottom-color: rgba(29, 31, 36, 0.16);
+            }
+
+            .stTabs [data-baseweb="tab"] p,
+            .stTabs [data-baseweb="tab"] span {
+                color: rgba(29, 31, 36, 0.7) !important;
+                opacity: 1 !important;
+            }
+
+            .stTabs [aria-selected="true"] p,
+            .stTabs [aria-selected="true"] span {
+                color: #9a6a0a !important;
+                font-weight: 800;
+            }
+
+            .stTextInput input {
+                background: rgba(255, 255, 255, 0.92) !important;
+                border-color: rgba(29, 31, 36, 0.16) !important;
+                color: #1d1f24 !important;
+            }
+
+            .stTextInput input::placeholder {
+                color: rgba(29, 31, 36, 0.5) !important;
+                opacity: 1 !important;
+            }
+
+            .stButton button,
+            .stFormSubmitButton button {
+                background: #1d1f24 !important;
+                border-color: #1d1f24 !important;
+                color: #fffaf0 !important;
+            }
+
+            .stButton button p,
+            .stFormSubmitButton button p {
+                color: #fffaf0 !important;
+            }
+
+            .stButton button:disabled,
+            .stFormSubmitButton button:disabled {
+                background: rgba(29, 31, 36, 0.22) !important;
+                border-color: rgba(29, 31, 36, 0.12) !important;
+            }
+
+            .stButton button:disabled p,
+            .stFormSubmitButton button:disabled p {
+                color: rgba(29, 31, 36, 0.56) !important;
+            }
+
+            .info-panel,
+            .media-panel,
+            .metric-card,
+            .portal-card,
+            .chat-shell,
+            .chat-assistant {
+                background: rgba(255, 255, 255, 0.72);
+                border-color: rgba(29, 31, 36, 0.12);
+            }
+
+            .metric-value,
+            .page-title,
+            .section-title {
+                color: #1d1f24;
+            }
+
+            .metric-label,
+            .chat-role {
+                color: rgba(29, 31, 36, 0.58);
+            }
+
+            .divider,
+            .site-footer {
+                border-color: rgba(29, 31, 36, 0.13);
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+if BACKGROUND_IMAGE_URL:
+    if st.session_state.light_theme:
+        background_overlay = (
+            "linear-gradient(rgba(247, 243, 234, 0.82), rgba(247, 243, 234, 0.9))"
+        )
+    else:
+        background_overlay = (
+            "linear-gradient(rgba(15, 17, 23, 0.84), rgba(15, 17, 23, 0.9))"
+        )
+
+    st.markdown(
+        f"""
+        <style>
+            .stApp {{
+                background:
+                    {background_overlay},
+                    url("{BACKGROUND_IMAGE_URL}") center / cover fixed;
+            }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
 
 def _get_user_value(user, field):
     if isinstance(user, dict):
@@ -572,7 +863,7 @@ if "reset_email" not in st.session_state:
 
 supaclient = get_client()
 
-st.sidebar.markdown("### Account")
+st.sidebar.markdown(f"### {tr('Account')}")
 if not supaclient:
     st.sidebar.info("Sign in is temporarily unavailable.")
 elif st.session_state.user:
@@ -586,23 +877,6 @@ else:
     signup_tab, signin_tab, reset_tab = st.sidebar.tabs(["Sign up", "Sign in", "Reset"])
 
     with signup_tab:
-        signup_pincode = st.text_input(
-            "Pincode",
-            key="signup_pincode",
-            placeholder="110001",
-            max_chars=10,
-        )
-        signup_pincode_digits = "".join(ch for ch in signup_pincode if ch.isdigit())
-        fetched_city_options = _lookup_cities_by_pincode(signup_pincode_digits)
-        if len(signup_pincode_digits) == 6 and fetched_city_options:
-            st.caption("City fetched from pincode.")
-        elif len(signup_pincode_digits) == 6:
-            st.caption("City could not be fetched. Choose manually.")
-
-        city_options = fetched_city_options or CITY_OPTIONS
-        if "Other" not in city_options:
-            city_options = [*city_options, "Other"]
-
         with st.form("signup_form"):
             signup_name = st.text_input(
                 "Student name",
@@ -622,7 +896,23 @@ else:
                     key="signup_phone",
                     placeholder="+919876543210",
                 )
-            signup_city = st.selectbox("City", city_options, key="signup_city")
+            signup_pincode = st.text_input(
+                "Pincode",
+                key="signup_pincode",
+                placeholder="110001",
+                max_chars=10,
+            )
+            signup_pincode_digits = "".join(ch for ch in signup_pincode if ch.isdigit())
+            fetched_city_options = _lookup_cities_by_pincode(signup_pincode_digits)
+            if len(signup_pincode_digits) == 6 and fetched_city_options:
+                st.caption("City fetched from pincode.")
+            elif len(signup_pincode_digits) == 6:
+                st.caption("City could not be fetched. Choose manually.")
+
+            city_options = fetched_city_options or CITY_OPTIONS
+            if "Other" not in city_options:
+                city_options = [*city_options, "Other"]
+            signup_city = st.selectbox("Nearest city", city_options, key="signup_city")
             gender_col, language_col = st.columns(2)
             with gender_col:
                 signup_gender = st.selectbox("Gender", GENDER_OPTIONS, key="signup_gender")
@@ -745,13 +1035,12 @@ else:
 
 
 st.markdown(
-    """
+    f"""
     <div class="title-row">
-        <div class="eyebrow">Live online guitar coaching</div>
-        <h1 class="page-title">Guitar Class - Learn with a Pro</h1>
+        <div class="eyebrow">{tr("Live online guitar coaching")}</div>
+        <h1 class="page-title">{tr("Guitar Class - Learn with a Pro")}</h1>
         <p class="lead">
-            Practical guitar lessons for beginners and growing players, focused on
-            songs, rhythm, chords, technique, and personal feedback.
+            {tr("Practical guitar lessons for beginners and growing players, focused on songs, rhythm, chords, technique, and personal feedback.")}
         </p>
     </div>
     """,
@@ -761,22 +1050,18 @@ st.markdown(
 
 def render_home_intro():
     st.markdown(
-        """
+        f"""
         <div class="intro-grid">
             <div class="media-panel">
-                <h2 class="section-title">Meet who you learn from</h2>
+                <h2 class="section-title">{tr("Meet who you learn from")}</h2>
                 <p class="lead" style="margin-top: 0; font-size: 1rem;">
-                    Watch Ashutosh performing live on stage and get a feel for the
-                    musicality, confidence, and real performance experience behind
-                    the classes.
+                    {tr("Watch Ashutosh performing live on stage and get a feel for the musicality, confidence, and real performance experience behind the classes.")}
                 </p>
             </div>
             <div class="media-panel">
-                <h2 class="section-title">What you sign up for</h2>
+                <h2 class="section-title">{tr("What you sign up for")}</h2>
                 <p>
-                    Structured guitar learning with clear practice targets, live feedback,
-                    beginner-friendly explanations, and access to class details after fee
-                    confirmation. Batch formation will be started soon for upcoming learners.
+                    {tr("Structured guitar learning with clear practice targets, live feedback, beginner-friendly explanations, and access to class details after fee confirmation. Batch formation will be started soon for upcoming learners.")}
                 </p>
             </div>
         </div>
@@ -820,10 +1105,9 @@ def render_home_intro():
                 <div class="tutor-intro">
                     {photo_html}
                     <div class="tutor-copy">
-                        <h2 class="section-title">Personal guidance, clear progress</h2>
+                        <h2 class="section-title">{tr("Personal guidance, clear progress")}</h2>
                         <p>
-                            Learn songs, rhythm, chords, and technique with practical
-                            feedback after every session.
+                            {tr("Learn songs, rhythm, chords, and technique with practical feedback after every session.")}
                         </p>
                     </div>
                 </div>
@@ -864,33 +1148,28 @@ def render_home_intro():
 
     with summary_col:
         st.markdown(
-            """
+            f"""
             <div class="side-panel-stack">
             <div class="media-panel">
-                <h2 class="section-title">Before you register</h2>
+                <h2 class="section-title">{tr("Before you register")}</h2>
                 <p>
-                    The stage performance video gives students and parents a clear sense
-                    of Ashutosh's command over the instrument, stage presence, and the
-                    kind of musical confidence students can build through consistent
-                    practice.
+                    {tr("The stage performance video gives students and parents a clear sense of Ashutosh's command over the instrument, stage presence, and the kind of musical confidence students can build through consistent practice.")}
                 </p>
             </div>
             <div class="info-panel">
-                <h2 class="section-title">Join our guitar classes</h2>
+                <h2 class="section-title">{tr("Join our guitar classes")}</h2>
                 <ul>
-                    <li>New batch formation will be started soon</li>
-                    <li>Weekly group and 1:1 sessions</li>
-                    <li>Pop, Rock, Blues, and Classical foundations</li>
-                    <li>Beginner-friendly lessons with flexible online timings</li>
-                    <li>Practice plans, technique feedback, and song-based learning</li>
+                    <li>{tr("New batch formation will be started soon")}</li>
+                    <li>{tr("Weekly group and 1:1 sessions")}</li>
+                    <li>{tr("Pop, Rock, Blues, and Classical foundations")}</li>
+                    <li>{tr("Beginner-friendly lessons with flexible online timings")}</li>
+                    <li>{tr("Practice plans, technique feedback, and song-based learning")}</li>
                 </ul>
             </div>
             <div class="info-panel">
-                <h2 class="section-title">How sessions work</h2>
+                <h2 class="section-title">{tr("How sessions work")}</h2>
                 <p>
-                    Live classes are hosted online. Students learn through guided
-                    exercises, song walkthroughs, chord progressions, rhythm practice,
-                    and personal feedback.
+                    {tr("Live classes are hosted online. Students learn through guided exercises, song walkthroughs, chord progressions, rhythm practice, and personal feedback.")}
                 </p>
             </div>
             </div>
@@ -915,28 +1194,32 @@ def render_student_dashboard(portal_result):
     paid_until = profile.get("paid_until") if profile else ""
     next_session = profile.get("next_session_at") if profile else ""
 
-    status_text = "Active" if paid else "Pending"
-    payment_text = f"Paid until {escape(str(paid_until))}" if paid_until and paid else "Fee confirmation pending"
-    session_text = escape(str(next_session or "Shared after fee confirmation"))
+    status_text = tr("Active") if paid else tr("Pending")
+    payment_text = (
+        f"Paid until {escape(str(paid_until))}"
+        if paid_until and paid
+        else tr("Fee confirmation pending")
+    )
+    session_text = escape(str(next_session or tr("Shared after fee confirmation")))
 
     st.markdown(
         f"""
-        <h2 class="section-title">Student Dashboard</h2>
+        <h2 class="section-title">{tr("Student Dashboard")}</h2>
         <div class="metric-row">
             <div class="metric-card">
-                <div class="metric-label">Account</div>
+                <div class="metric-label">{tr("Account")}</div>
                 <div class="metric-value" style="font-size: 1.35rem;">
                     {escape(_user_label(st.session_state.user)) if signed_in else "Not signed in"}
                 </div>
             </div>
             <div class="metric-card">
-                <div class="metric-label">Payment status</div>
+                <div class="metric-label">{tr("Payment status")}</div>
                 <div class="metric-value" style="font-size: 1.35rem;">{status_text}</div>
                 <p style="margin: 0.35rem 0 0; color: rgba(255,255,255,0.68);">{payment_text}</p>
             </div>
             <div class="metric-card">
-                <div class="metric-label">Next session</div>
-                <div class="metric-value" style="font-size: 1.35rem;">Class access</div>
+                <div class="metric-label">{tr("Next session")}</div>
+                <div class="metric-value" style="font-size: 1.35rem;">{tr("Class access")}</div>
                 <p style="margin: 0.35rem 0 0; color: rgba(255,255,255,0.68);">{session_text}</p>
             </div>
         </div>
@@ -999,10 +1282,10 @@ def render_payment_prompt():
 
 def render_pay_fees_tab(portal_result):
     st.markdown(
-        """
-        <h2 class="section-title">Pay Fees</h2>
+        f"""
+        <h2 class="section-title">{tr("Pay Fees")}</h2>
         <p class="lead" style="margin-top: 0; font-size: 1rem;">
-            Complete your payment to unlock live session access and recordings.
+            {tr("Complete your payment to unlock live session access and recordings.")}
         </p>
         """,
         unsafe_allow_html=True,
@@ -1026,10 +1309,10 @@ def render_pay_fees_tab(portal_result):
 
 def render_session_details_tab(portal_result):
     st.markdown(
-        """
-        <h2 class="section-title">Session Details</h2>
+        f"""
+        <h2 class="section-title">{tr("Session Details")}</h2>
         <p class="lead" style="margin-top: 0; font-size: 1rem;">
-            Paid students can access upcoming live class details and shared recordings here.
+            {tr("Paid students can access upcoming live class details and shared recordings here.")}
         </p>
         """,
         unsafe_allow_html=True,
@@ -1056,13 +1339,13 @@ def render_session_details_tab(portal_result):
 
     link_html = (
         f'<a class="session-link" href="{safe_link}" target="_blank" rel="noopener noreferrer">'
-        "Open live session</a>"
+        f'{tr("Open live session")}</a>'
         if live_session_link
         else "<p>Live session link will be shared before class.</p>"
     )
     notes_link_html = (
         f'<a class="session-link" href="{safe_notes_link}" target="_blank" rel="noopener noreferrer">'
-        "Open session notes</a>"
+        f'{tr("Open session notes")}</a>'
         if session_notes_link
         else "<p>Session notes link will be shared after class.</p>"
     )
@@ -1071,15 +1354,15 @@ def render_session_details_tab(portal_result):
         f"""
         <div class="portal-grid">
             <div class="portal-card">
-                <h3 class="section-title">Next Session</h3>
+                <h3 class="section-title">{tr("Next Session")}</h3>
                 <p>{safe_session}</p>
             </div>
             <div class="portal-card">
-                <h3 class="section-title">Live Class</h3>
+                <h3 class="section-title">{tr("Live Class")}</h3>
                 {link_html}
             </div>
             <div class="portal-card">
-                <h3 class="section-title">Session Notes</h3>
+                <h3 class="section-title">{tr("Session Notes")}</h3>
                 {notes_link_html}
             </div>
         </div>
@@ -1088,7 +1371,7 @@ def render_session_details_tab(portal_result):
     )
 
     recordings = (portal_result or {}).get("recordings") or []
-    st.markdown("### Session Recordings")
+    st.markdown(f"### {tr('Session Recordings')}")
     if not recordings:
         st.info("No recordings have been shared yet.")
         return
@@ -1104,7 +1387,7 @@ def render_session_details_tab(portal_result):
                     <h3 class="section-title">{title}</h3>
                     <p>{created_at}</p>
                     <a class="session-link" href="{url}" target="_blank" rel="noopener noreferrer">
-                        Open recording
+                        {tr("Open recording")}
                     </a>
                 </div>
                 """,
@@ -1114,10 +1397,10 @@ def render_session_details_tab(portal_result):
 
 def render_faq_tab():
     st.markdown(
-        """
-        <h2 class="section-title">FAQ Chat</h2>
+        f"""
+        <h2 class="section-title">{tr("FAQ Chat")}</h2>
         <p class="lead" style="margin-top: 0; font-size: 1rem;">
-            Ask about schedules, fees, practice routines, lesson levels, or getting started.
+            {tr("Ask about schedules, fees, practice routines, lesson levels, or getting started.")}
         </p>
         """,
         unsafe_allow_html=True,
@@ -1574,14 +1857,14 @@ with check (lower(auth.jwt() ->> 'email') = '{admin_email}');
 portal_result = get_student_portal(_user_id()) if st.session_state.user and _user_id() else None
 
 if _is_admin():
-    faq_tab, admin_tab = st.tabs(["FAQ Chat", "Admin Panel"])
+    faq_tab, admin_tab = st.tabs([tr("FAQ Chat"), "Admin Panel"])
     with faq_tab:
         render_faq_tab()
     with admin_tab:
         render_admin_panel()
 else:
     render_student_dashboard(portal_result)
-    faq_tab, pay_tab, session_tab = st.tabs(["FAQ Chat", "Pay Fees", "Session Details"])
+    faq_tab, pay_tab, session_tab = st.tabs([tr("FAQ Chat"), tr("Pay Fees"), tr("Session Details")])
     with faq_tab:
         render_faq_tab()
     with pay_tab:

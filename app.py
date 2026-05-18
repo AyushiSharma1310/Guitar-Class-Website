@@ -138,8 +138,8 @@ st.markdown(
             background:
                 radial-gradient(circle at 22% 14%, rgba(216, 180, 106, 0.18), transparent 24rem),
                 radial-gradient(circle at 86% 22%, rgba(105, 132, 190, 0.14), transparent 28rem),
-                linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+                linear-gradient(rgba(255, 255, 255, 0.35) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.35) 1px, transparent 1px),
                 #0f1117;
             background-size: auto, auto, 44px 44px, 44px 44px, auto;
             background-attachment: fixed;
@@ -1232,7 +1232,7 @@ def render_footer():
     st.markdown(
         """
         <div class="site-footer">
-            Made with ❤️ by my didi
+            Made with ❤️ by Ayushi Didi
         </div>
         """,
         unsafe_allow_html=True,

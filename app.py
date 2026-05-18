@@ -764,9 +764,9 @@ def render_home_intro():
         """
         <div class="intro-grid">
             <div class="media-panel">
-                <h2 class="section-title">Meet your tutor</h2>
+                <h2 class="section-title">Meet who you learn from</h2>
                 <p class="lead" style="margin-top: 0; font-size: 1rem;">
-                    Watch the tutor performing live on stage and get a feel for the
+                    Watch Ashutosh performing live on stage and get a feel for the
                     musicality, confidence, and real performance experience behind
                     the classes.
                 </p>
@@ -791,7 +791,7 @@ def render_home_intro():
         st.markdown(
             """
             <div class="media-panel media-placeholder">
-                Add tutor intro video at<br>
+                Add Ashutosh intro video at<br>
                 <strong>assets/tutor_intro.mp4</strong>
             </div>
             """,
@@ -806,12 +806,12 @@ def render_home_intro():
             photo_data = base64.b64encode(TUTOR_PHOTO_PATH.read_bytes()).decode("ascii")
             photo_html = (
                 f'<img src="data:image/jpeg;base64,{photo_data}" '
-                'alt="Tutor photo">'
+                'alt="Ashutosh photo">'
             )
         else:
             photo_html = (
                 '<div class="media-placeholder" style="min-height: 140px;">'
-                'Add tutor photo at<br><strong>assets/tutor_photo.jpeg</strong></div>'
+                'Add Ashutosh photo at<br><strong>assets/tutor_photo.jpeg</strong></div>'
             )
 
         st.markdown(
@@ -854,7 +854,7 @@ def render_home_intro():
                     </div>
                     <div class="metric-card">
                         <div class="metric-label">Seats per batch</div>
-                        <div class="metric-value" style="font-size: 1.35rem;">10</div>
+                        <div class="metric-value" style="font-size: 1.35rem;">5</div>
                     </div>
                 </div>
             </div>
@@ -870,7 +870,7 @@ def render_home_intro():
                 <h2 class="section-title">Before you register</h2>
                 <p>
                     The stage performance video gives students and parents a clear sense
-                    of the tutor's command over the instrument, stage presence, and the
+                    of Ashutosh's command over the instrument, stage presence, and the
                     kind of musical confidence students can build through consistent
                     practice.
                 </p>
@@ -1011,7 +1011,7 @@ def render_pay_fees_tab(portal_result):
         st.info("Sign up or sign in from the sidebar to pay fees.")
         return
     if portal_result and portal_result["error"]:
-        st.info("Your payment page is being prepared. Please contact the tutor if this continues.")
+        st.info("Your payment page is being prepared. Please contact Ashutosh if this continues.")
         return
     profile = (portal_result or {}).get("profile") or {}
     if _is_paid_student(profile):
@@ -1038,7 +1038,7 @@ def render_session_details_tab(portal_result):
         st.info("Sign up or sign in from the sidebar to access session details.")
         return
     if portal_result and portal_result["error"]:
-        st.info("Your student portal is being prepared. Please contact the tutor if this continues.")
+        st.info("Your student portal is being prepared. Please contact Ashutosh if this continues.")
         return
 
     profile = (portal_result or {}).get("profile") or {}
@@ -1123,7 +1123,7 @@ def render_faq_tab():
             if not answer:
                 answer = (
                     find_faq(question)
-                    or "Sorry, I don't have that info yet. Please contact the tutor for details."
+                    or "Sorry, I don't have that info yet. Please contact Ashutosh for details."
                 )
             st.session_state.chat_history.append(("assistant", answer))
             save_chat(

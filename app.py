@@ -109,6 +109,10 @@ st.markdown(
             line-height: 1.65;
             max-width: 820px;
             margin-top: 1.15rem;
+            text-align: justify;
+            text-justify: inter-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
         }
 
         .section-title {
@@ -129,6 +133,16 @@ st.markdown(
         .info-panel li {
             color: rgba(255, 255, 255, 0.78);
             line-height: 1.6;
+        }
+
+        .info-panel p,
+        .media-panel p,
+        .portal-card p,
+        .chat-message p {
+            text-align: justify;
+            text-justify: inter-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
         }
 
         .info-panel ul {
@@ -332,6 +346,13 @@ st.markdown(
             color: rgba(255, 255, 255, 0.78);
             line-height: 1.6;
             margin-bottom: 0.7rem;
+        }
+
+        .metric-card p,
+        .media-placeholder p,
+        .site-footer p,
+        [data-testid="stSidebar"] p {
+            text-align: left;
         }
 
         .session-link {
@@ -735,8 +756,9 @@ def render_home_intro():
             <div class="media-panel">
                 <h2 class="section-title">Meet your tutor</h2>
                 <p class="lead" style="margin-top: 0; font-size: 1rem;">
-                    Watch the intro before registering so you know the teaching style,
-                    lesson flow, and what your first class will feel like.
+                    Watch the tutor performing live on stage and get a feel for the
+                    musicality, confidence, and real performance experience behind
+                    the classes.
                 </p>
             </div>
             <div class="media-panel">
@@ -744,7 +766,7 @@ def render_home_intro():
                 <p>
                     Structured guitar learning with clear practice targets, live feedback,
                     beginner-friendly explanations, and access to class details after fee
-                    confirmation.
+                    confirmation. Batch formation will be started soon for upcoming learners.
                 </p>
             </div>
         </div>
@@ -820,9 +842,10 @@ def render_home_intro():
             <div class="media-panel">
                 <h2 class="section-title">Before you register</h2>
                 <p>
-                    The intro video gives students and parents a clear sense of the
-                    tutor's teaching style, the learning pace, and how live sessions
-                    turn practice into visible progress.
+                    The stage performance video gives students and parents a clear sense
+                    of the tutor's command over the instrument, stage presence, and the
+                    kind of musical confidence students can build through consistent
+                    practice.
                 </p>
             </div>
             """,
@@ -839,6 +862,7 @@ def render_home_intro():
             <div class="info-panel">
                 <h2 class="section-title">Join our guitar classes</h2>
                 <ul>
+                    <li>New batch formation will be started soon</li>
                     <li>Weekly group and 1:1 sessions</li>
                     <li>Pop, Rock, Blues, and Classical foundations</li>
                     <li>Beginner-friendly lessons with flexible online timings</li>

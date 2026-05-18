@@ -275,6 +275,7 @@ def update_student_access(
     is_paid,
     next_session_at="",
     live_session_link="",
+    session_notes_link="",
     paid_until=None,
 ):
     client = get_admin_client()
@@ -284,6 +285,7 @@ def update_student_access(
         "is_paid": bool(is_paid),
         "next_session_at": next_session_at,
         "live_session_link": live_session_link,
+        "session_notes_link": session_notes_link,
     }
     if paid_until is not None:
         data["paid_until"] = paid_until or None
@@ -293,10 +295,14 @@ def update_student_access(
         return client.table("profiles").update(data).eq("id", user_id).execute()
     except Exception as e:
         if paid_until is not None and (
-            "paid_until" in str(e) or "last_payment_at" in str(e) or "schema cache" in str(e)
+            "paid_until" in str(e)
+            or "last_payment_at" in str(e)
+            or "session_notes_link" in str(e)
+            or "schema cache" in str(e)
         ):
             data.pop("paid_until", None)
             data.pop("last_payment_at", None)
+            data.pop("session_notes_link", None)
             try:
                 return client.table("profiles").update(data).eq("id", user_id).execute()
             except Exception as retry_error:

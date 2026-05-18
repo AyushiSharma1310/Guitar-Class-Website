@@ -1049,14 +1049,22 @@ def render_session_details_tab(portal_result):
 
     next_session_at = profile.get("next_session_at") or "Schedule will be updated soon."
     live_session_link = profile.get("live_session_link")
+    session_notes_link = profile.get("session_notes_link")
     safe_session = escape(str(next_session_at))
     safe_link = escape(live_session_link or "", quote=True)
+    safe_notes_link = escape(session_notes_link or "", quote=True)
 
     link_html = (
         f'<a class="session-link" href="{safe_link}" target="_blank" rel="noopener noreferrer">'
         "Open live session</a>"
         if live_session_link
         else "<p>Live session link will be shared before class.</p>"
+    )
+    notes_link_html = (
+        f'<a class="session-link" href="{safe_notes_link}" target="_blank" rel="noopener noreferrer">'
+        "Open session notes</a>"
+        if session_notes_link
+        else "<p>Session notes link will be shared after class.</p>"
     )
 
     st.markdown(
@@ -1069,6 +1077,10 @@ def render_session_details_tab(portal_result):
             <div class="portal-card">
                 <h3 class="section-title">Live Class</h3>
                 {link_html}
+            </div>
+            <div class="portal-card">
+                <h3 class="section-title">Session Notes</h3>
+                {notes_link_html}
             </div>
         </div>
         """,
@@ -1169,6 +1181,7 @@ create table if not exists public.profiles (
   last_payment_at timestamp with time zone,
   next_session_at text,
   live_session_link text,
+  session_notes_link text,
   created_at timestamp with time zone default now()
 );
 
@@ -1183,6 +1196,7 @@ add column if not exists paid_until date,
 add column if not exists last_payment_at timestamp with time zone,
 add column if not exists next_session_at text,
 add column if not exists live_session_link text,
+add column if not exists session_notes_link text,
 alter column phone type text using phone::text;
 
 alter table public.profiles enable row level security;
@@ -1387,6 +1401,7 @@ with check (lower(auth.jwt() ->> 'email') = '{admin_email}');
                     "last_payment_at",
                     "next_session_at",
                     "live_session_link",
+                    "session_notes_link",
                     "id",
                 ],
             )
@@ -1413,6 +1428,7 @@ with check (lower(auth.jwt() ->> 'email') = '{admin_email}');
                                 True,
                                 student.get("next_session_at") or "",
                                 student.get("live_session_link") or "",
+                                student.get("session_notes_link") or "",
                                 paid_until,
                             )
                             if isinstance(response, dict) and response.get("error"):
@@ -1442,6 +1458,7 @@ with check (lower(auth.jwt() ->> 'email') = '{admin_email}');
                         "last_payment_at",
                         "next_session_at",
                         "live_session_link",
+                        "session_notes_link",
                         "id",
                     ],
                 )
@@ -1464,6 +1481,7 @@ with check (lower(auth.jwt() ->> 'email') = '{admin_email}');
                                 True,
                                 student.get("next_session_at") or "",
                                 student.get("live_session_link") or "",
+                                student.get("session_notes_link") or "",
                                 paid_until,
                             )
                             if isinstance(response, dict) and response.get("error"):
@@ -1512,6 +1530,11 @@ with check (lower(auth.jwt() ->> 'email') = '{admin_email}');
                     value=selected_student.get("live_session_link") or "",
                     placeholder="https://meet.google.com/...",
                 )
+                notes_link = st.text_input(
+                    "Session notes link",
+                    value=selected_student.get("session_notes_link") or "",
+                    placeholder="https://docs.google.com/...",
+                )
                 save_access = st.form_submit_button("Save access")
                 if save_access:
                     response = update_student_access(
@@ -1519,6 +1542,7 @@ with check (lower(auth.jwt() ->> 'email') = '{admin_email}');
                         paid_status,
                         next_session,
                         live_link,
+                        notes_link,
                         paid_until.isoformat() if paid_status else "",
                     )
                     if isinstance(response, dict) and response.get("error"):

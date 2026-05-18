@@ -215,9 +215,9 @@ st.markdown(
 
         .kpi-strip {
             display: grid;
-            grid-template-columns: repeat(3, minmax(120px, 1fr));
-            gap: 1rem;
-            margin-top: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+            gap: 0.75rem;
+            margin: 1rem -0.35rem 0;
         }
 
         .video-banner {
@@ -239,6 +239,16 @@ st.markdown(
 
         .class-info-row {
             margin-top: 1.3rem;
+        }
+
+        .side-panel-stack {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .side-panel-stack .info-panel,
+        .side-panel-stack .media-panel {
+            min-height: 0;
         }
 
         .kpi-strip .metric-card {
@@ -830,6 +840,22 @@ def render_home_intro():
                         <div class="metric-label">Access</div>
                         <div class="metric-value" style="font-size: 1.35rem;">Portal</div>
                     </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Registration</div>
+                        <div class="metric-value" style="font-size: 1.35rem;">25-June-2026</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Total batches</div>
+                        <div class="metric-value" style="font-size: 1.35rem;">2</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">New batch commencement</div>
+                        <div class="metric-value" style="font-size: 1.2rem;">Soon</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Seats per batch</div>
+                        <div class="metric-value" style="font-size: 1.35rem;">10</div>
+                    </div>
                 </div>
             </div>
             """,
@@ -839,6 +865,7 @@ def render_home_intro():
     with summary_col:
         st.markdown(
             """
+            <div class="side-panel-stack">
             <div class="media-panel">
                 <h2 class="section-title">Before you register</h2>
                 <p>
@@ -848,17 +875,6 @@ def render_home_intro():
                     practice.
                 </p>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="class-info-row">', unsafe_allow_html=True)
-    desc_col, session_col = st.columns(2, gap="large")
-
-    with desc_col:
-        st.markdown(
-            """
             <div class="info-panel">
                 <h2 class="section-title">Join our guitar classes</h2>
                 <ul>
@@ -869,14 +885,6 @@ def render_home_intro():
                     <li>Practice plans, technique feedback, and song-based learning</li>
                 </ul>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    with session_col:
-        st.markdown(
-            """
             <div class="info-panel">
                 <h2 class="section-title">How sessions work</h2>
                 <p>
@@ -885,9 +893,11 @@ def render_home_intro():
                     and personal feedback.
                 </p>
             </div>
+            </div>
             """,
             unsafe_allow_html=True,
         )
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 render_home_intro()

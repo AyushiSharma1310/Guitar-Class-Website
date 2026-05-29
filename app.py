@@ -794,9 +794,28 @@ def _next_paid_until(student):
 
 
 def _normalize_student_rows(students):
+    text_fields = [
+        "id",
+        "email",
+        "phone",
+        "created_at",
+        "student_name",
+        "city",
+        "pincode",
+        "gender",
+        "preferred_language",
+        "paid_until",
+        "last_payment_at",
+        "next_session_at",
+        "live_session_link",
+        "session_notes_link",
+    ]
     normalized = []
     for student in students:
         row = dict(student)
+        for field in text_fields:
+            if row.get(field) is not None:
+                row[field] = str(row[field])
         row["is_paid"] = _is_paid_student(row)
         normalized.append(row)
     return normalized
@@ -1452,12 +1471,12 @@ def render_admin_panel():
                 f"""
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
-  email text,
-  phone text,
-  student_name text,
+  email text unique not null,
+  phone bigint unique not null,
+  student_name text not null,
   city text,
-  pincode text,
-  gender text,
+  pincode text not null,
+  gender text not null,
   preferred_language text,
   is_paid boolean not null default false,
   paid_until date,
@@ -1469,6 +1488,7 @@ create table if not exists public.profiles (
 );
 
 alter table public.profiles
+add column if not exists phone bigint,
 add column if not exists student_name text,
 add column if not exists city text,
 add column if not exists pincode text,
@@ -1480,7 +1500,7 @@ add column if not exists last_payment_at timestamp with time zone,
 add column if not exists next_session_at text,
 add column if not exists live_session_link text,
 add column if not exists session_notes_link text,
-alter column phone type text using phone::text;
+alter column phone type bigint using nullif(regexp_replace(phone::text, '\\D', '', 'g'), '')::bigint;
 
 alter table public.profiles enable row level security;
 
@@ -1500,7 +1520,7 @@ begin
   values (
     new.id,
     new.email,
-    coalesce(new.phone, new.raw_user_meta_data ->> 'phone'),
+    nullif(regexp_replace(coalesce(new.phone, new.raw_user_meta_data ->> 'phone', ''), '\\D', '', 'g'), '')::bigint,
     new.raw_user_meta_data ->> 'student_name',
     new.raw_user_meta_data ->> 'city',
     new.raw_user_meta_data ->> 'pincode',
@@ -1532,7 +1552,7 @@ insert into public.profiles (
 select
   id,
   email,
-  coalesce(phone, raw_user_meta_data ->> 'phone'),
+  nullif(regexp_replace(coalesce(phone, raw_user_meta_data ->> 'phone', ''), '\\D', '', 'g'), '')::bigint,
   raw_user_meta_data ->> 'student_name',
   raw_user_meta_data ->> 'city',
   raw_user_meta_data ->> 'pincode',
@@ -1697,8 +1717,8 @@ with check (lower(auth.jwt() ->> 'email') = '{admin_email}');
                     if not student_id:
                         continue
                     name = _student_display_name(student)
-                    email = student.get("email") or ""
-                    phone = student.get("phone") or ""
+                    email = str(student.get("email") or "")
+                    phone = str(student.get("phone") or "")
                     row_col, action_col = st.columns([3, 1])
                     with row_col:
                         st.markdown(f"**{name}**")

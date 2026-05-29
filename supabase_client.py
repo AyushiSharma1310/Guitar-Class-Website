@@ -63,6 +63,10 @@ def _signup_credentials(email, phone, password, student_details=None):
         credentials["options"]["email_redirect_to"] = APP_URL
     return credentials
 
+def _phone_to_int(phone):
+    digits = "".join(ch for ch in str(phone or "") if ch.isdigit())
+    return int(digits) if digits else None
+
 def _get_user_value(user, field):
     if isinstance(user, dict):
         return user.get(field)
@@ -252,7 +256,7 @@ def upsert_student_profile(user, phone=None, student_details=None):
     data = {
         "id": user_id,
         "email": _get_user_value(user, "email"),
-        "phone": phone_value,
+        "phone": _phone_to_int(phone_value),
         **details,
     }
     try:
